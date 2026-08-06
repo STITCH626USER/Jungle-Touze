@@ -101,6 +101,14 @@
 
                 <div id="toast-container"></div>
 
+                <!-- In-Board Modal -->
+                <div id="action-modal" style="display:none; flex-direction:column; gap:20px; position:absolute; inset:0; width:100%; height:100%; z-index:100; background:rgba(0,0,0,0.8); backdrop-filter:blur(10px); justify-content:center; align-items:center; padding:15px; border-radius:15px;">
+                    <div id="drawn-card" class="card shadow-pop" style="width:auto;height:clamp(200px, 35vh, 280px);aspect-ratio:2/3;border-radius:20px;overflow:hidden;border:4.5px solid white;box-shadow:0 15px 40px rgba(0,0,0,0.6);background:white;">
+                        <img id="drawn-card-img" src="" alt="Carte" style="width:100%;height:100%;object-fit:contain;display:block;">
+                    </div>
+                    <div id="card-actions" style="display:flex;flex-direction:column;gap:10px;width:100%;max-width:320px;background:rgba(15,15,26,0.9);padding:12px 20px;border-radius:30px;border:1px solid rgba(255,255,255,0.12);backdrop-filter:blur(15px);"></div>
+                    <div id="placement-actions" style="display:none;flex-direction:row;gap:12px;justify-content:center;width:100%;max-width:320px;"></div>
+                </div>
             </div>
 
             <div class="local-player-area" id="local-player-area">
@@ -118,13 +126,6 @@
     </div>
 
     <!-- Modals -->
-    <div id="action-modal" class="modal-overlay" style="display:none; flex-direction:column; gap:20px;">
-        <div id="drawn-card" class="card shadow-pop" style="width:auto;height:30vh;max-height:300px;max-width:45vw;aspect-ratio:2/3;border-radius:22px;overflow:hidden;border:4.5px solid white;box-shadow:0 25px 60px rgba(0,0,0,0.6);background:white;">
-            <img id="drawn-card-img" src="" alt="Carte" style="width:100%;height:100%;object-fit:contain;display:block;">
-        </div>
-        <div id="card-actions" style="display:flex;flex-direction:column;gap:10px;width:100%;max-width:320px;background:rgba(15,15,26,0.9);padding:12px 20px;border-radius:30px;border:1px solid rgba(255,255,255,0.12);backdrop-filter:blur(15px);"></div>
-        <div id="placement-actions" style="display:none;flex-direction:row;gap:12px;justify-content:center;width:100%;max-width:320px;"></div>
-    </div>
 
     <div id="history-modal" class="modal-overlay" style="display:none;">
         <div class="modal-content glass">
@@ -197,7 +198,7 @@
 
     <div id="parrot-modal" class="modal-overlay" style="display:none;">
         <div class="modal-content glass">
-            <button class="modal-close-cross" onclick="ui.hideModal('parrot-modal')">✕</button>
+            <button class="modal-close-cross" onclick="game.sendAction('execute_power', {cancel: true}); ui.hideModal('parrot-modal')">✕</button>
             <h2 style="color:var(--secondary); text-align:center;">🦜 Perroquet</h2>
             <p style="color:white; text-align:center; margin-bottom:10px;">Devinez la prochaine carte piochée.</p>
             <div id="parrot-animal-grid">
@@ -232,6 +233,6 @@
 
     <!-- PeerJS from CDN -->
     <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
-    <script src="game.js"></script>
+    <script src="game.js?v=4"></script>
 </body>
 </html>

@@ -281,7 +281,7 @@ input[type="text"]:focus { outline: none; border-color: var(--secondary); box-sh
 .admire-card-power { font-size: 0.95rem; font-weight: 700; color: var(--text-dim); max-width: 280px; line-height: 1.5; }
 
 /* Global Z-Indexes */
-#action-modal { position: fixed !important; inset: 0 !important; width: 100vw !important; height: 100vh !important; z-index: 150000 !important; display: none; background: rgba(0,0,0,0.7); backdrop-filter: blur(8px); justify-content: center; align-items: center; margin: 0 !important; padding: 20px; }
+
 #opponent-zoom-modal { z-index: 50000 !important; }
 #help-modal { z-index: 400000 !important; }
 #history-modal { z-index: 500000 !important; }

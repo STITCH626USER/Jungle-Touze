@@ -588,17 +588,12 @@ class GameEngine {
                 }
                 
                 this.state.pendingPower = { card: drawn, fromDeck: payload.deck };
-                this.state.activeAction = 'keep_reject';
-                this.broadcastState();
-                break;
-                
-            case 'keep':
-                if(this.state.activeAction !== 'keep_reject') return;
-                this.state.activeAction = 'place';
+                this.state.activeAction = 'place_or_reject';
                 this.broadcastState();
                 break;
                 
             case 'reject':
+                if(this.state.activeAction !== 'place_or_reject') return;
                 const deckTarget = this.state.pendingPower.fromDeck === 1 ? 2 : 1;
                 this.state.lastRejected = { animal: this.state.pendingPower.card.animal, deck: deckTarget };
                 if (deckTarget === 1) {
@@ -612,13 +607,12 @@ class GameEngine {
                 break;
 
             case 'place_card':
-                if(this.state.activeAction !== 'place') return;
+                if(this.state.activeAction !== 'place_or_reject') return;
                 const side = payload.side; // 'left' or 'right'
-                const usePower = payload.usePower;
                 const c = this.state.pendingPower.card;
                 
                 soundEngine.play(c.animal);
-                ui.logHistory(activePlayer.name, `a placé ${usePower?'AVEC':'SANS'} pouvoir`, c.animal);
+                ui.logHistory(activePlayer.name, `a placé une carte`, c.animal);
                 
                 if (side === 'left') activePlayer.cards.unshift(c);
                 else activePlayer.cards.push(c);
@@ -629,8 +623,24 @@ class GameEngine {
                 this.checkWinConditions();
                 if(this.state.status !== 'playing') return;
 
-                if (usePower) {
-                    this.executePower(activePlayer, c.animal, payload);
+                const activePowers = ['crocodile', 'monkey', 'crab', 'parrot'];
+                if (activePowers.includes(c.animal)) {
+                    this.state.activeAction = 'power_target';
+                    this.broadcastState();
+                } else if (c.animal === 'hermit_crab') {
+                    const hasCrab = activePlayer.cards.some(card => card.animal === 'crab');
+                    if(hasCrab) {
+                        ui.toast("💖 Bernard l'Hermite — Vous rejouez !");
+                        this.state.activeAction = 'animating';
+                        this.state.pendingPower.showLove = true;
+                        this.broadcastState();
+                        setTimeout(() => {
+                            this.state.pendingPower.showLove = false;
+                            this.nextTurn(activePlayer.id);
+                        }, 2000);
+                    } else {
+                        this.nextTurn();
+                    }
                 } else {
                     this.nextTurn();
                 }
@@ -954,7 +964,7 @@ class GameEngine {
         pActions.style.display = 'none';
         
         if (activePlayer && !isMyTurn && this.state.status === 'playing') {
-            if (this.state.activeAction === 'keep_reject' || this.state.activeAction === 'place' || this.state.activeAction === 'power_target') {
+            if (this.state.activeAction === 'place_or_reject' || this.state.activeAction === 'power_target') {
                 if(this.state.pendingPower && this.state.pendingPower.card) {
                     actModal.style.display = 'flex';
                     const c = this.state.pendingPower.card;
@@ -971,17 +981,7 @@ class GameEngine {
         }
 
         if(isMyTurn && this.state.status === 'playing') {
-            if(this.state.activeAction === 'keep_reject') {
-                actModal.style.display = 'flex';
-                cActions.style.display = 'flex';
-                const c = this.state.pendingPower.card;
-                document.getElementById('drawn-card-img').src = `assets/card_${c.animal}.jpg`;
-                cActions.innerHTML = `
-                    <button class="btn btn-action btn-keep" onclick="game.sendAction('keep')">✅ Garder</button>
-                    <button class="btn btn-action btn-reject" onclick="game.sendAction('reject')">❌ Jeter</button>
-                `;
-            } 
-            else if(this.state.activeAction === 'place') {
+            if(this.state.activeAction === 'place_or_reject') {
                 actModal.style.display = 'flex';
                 pActions.style.display = 'flex';
                 const c = this.state.pendingPower.card;
@@ -990,25 +990,14 @@ class GameEngine {
                 pActions.innerHTML = `
                     <div style="display:flex; flex-direction:column; gap:12px; width:100%;">
                         <div style="display:flex; gap:12px;">
-                            <button class="btn btn-action btn-keep" style="flex:1; padding:12px 5px; border-radius:20px; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:4px;" onclick="game.sendAction('place_card', {side:'left', usePower:false})">
-                                <div style="font-size:1.1rem; font-weight:900;">⬅ Gauche</div>
-                                <div style="font-size:0.75rem; font-weight:800; opacity:0.8; text-transform:uppercase; letter-spacing:0.5px;">Sans pouvoir</div>
+                            <button class="btn btn-action btn-main" style="flex:1; padding:16px 5px; border-radius:20px; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:4px;" onclick="game.sendAction('place_card', {side:'left'})">
+                                <div style="font-size:1.2rem; font-weight:900;">⬅ Placer à Gauche</div>
                             </button>
-                            <button class="btn btn-action btn-keep" style="flex:1; padding:12px 5px; border-radius:20px; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:4px;" onclick="game.sendAction('place_card', {side:'right', usePower:false})">
-                                <div style="font-size:1.1rem; font-weight:900;">Droite ➡</div>
-                                <div style="font-size:0.75rem; font-weight:800; opacity:0.8; text-transform:uppercase; letter-spacing:0.5px;">Sans pouvoir</div>
+                            <button class="btn btn-action btn-main" style="flex:1; padding:16px 5px; border-radius:20px; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:4px;" onclick="game.sendAction('place_card', {side:'right'})">
+                                <div style="font-size:1.2rem; font-weight:900;">Placer à Droite ➡</div>
                             </button>
                         </div>
-                        <div style="display:flex; gap:12px;">
-                            <button class="btn btn-action btn-main" style="flex:1; padding:12px 5px; border-radius:20px; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:4px;" onclick="game.sendAction('place_card', {side:'left', usePower:true})">
-                                <div style="font-size:1.1rem; font-weight:900;">⬅ Gauche</div>
-                                <div style="font-size:0.75rem; font-weight:800; opacity:0.9; text-transform:uppercase; letter-spacing:0.5px;">✨ Avec Pouvoir</div>
-                            </button>
-                            <button class="btn btn-action btn-main" style="flex:1; padding:12px 5px; border-radius:20px; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:4px;" onclick="game.sendAction('place_card', {side:'right', usePower:true})">
-                                <div style="font-size:1.1rem; font-weight:900;">Droite ➡</div>
-                                <div style="font-size:0.75rem; font-weight:800; opacity:0.9; text-transform:uppercase; letter-spacing:0.5px;">✨ Avec Pouvoir</div>
-                            </button>
-                        </div>
+                        <button class="btn btn-action btn-reject" style="width:100%; border-radius:20px; padding:16px;" onclick="game.sendAction('reject')">❌ Jeter la carte</button>
                     </div>
                 `;
             }
@@ -1223,21 +1212,14 @@ class GameEngine {
                 const dId = Math.random() > 0.5 ? 1 : 2;
                 this.processAction(bot.id, 'draw', { deck: dId });
             } 
-            else if(this.state.activeAction === 'keep_reject') {
+            else if(this.state.activeAction === 'place_or_reject') {
                 const keep = Math.random() > 0.15;
-                if(keep) this.processAction(bot.id, 'keep');
-                else this.processAction(bot.id, 'reject');
-            } 
-            else if(this.state.activeAction === 'place') {
-                const side = Math.random() > 0.5 ? 'left' : 'right';
-                const c = this.state.pendingPower.card;
-                let usePower = false;
-                if(c.animal === 'hermit_crab') {
-                    usePower = bot.cards.some(bc => bc.animal === 'crab');
-                } else if(c.animal === 'crocodile' || c.animal === 'monkey' || c.animal === 'crab' || c.animal === 'parrot') {
-                    usePower = Math.random() > 0.3;
+                if(keep) {
+                    const side = Math.random() > 0.5 ? 'left' : 'right';
+                    this.processAction(bot.id, 'place_card', { side });
+                } else {
+                    this.processAction(bot.id, 'reject');
                 }
-                this.processAction(bot.id, 'place_card', { side, usePower });
             }
             else if(this.state.activeAction === 'power_target') {
                 const c = this.state.pendingPower.card;
