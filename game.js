@@ -1176,22 +1176,13 @@ class GameEngine {
 
             if(playerId === this.myId) {
                 oppNameEl.style.display = 'none';
-                img.src = `assets/card_${c.animal}.jpg`;
-                nameEl.textContent = animalNames[c.animal];
-                powerEl.textContent = powerDesc[c.animal];
             } else {
                 oppNameEl.style.display = 'block';
                 oppNameEl.textContent = `Carte de ${p.name}`;
-                if(c.revealedByParrot) {
-                    img.src = `assets/card_${c.animal}.jpg`;
-                    nameEl.textContent = animalNames[c.animal];
-                    powerEl.textContent = powerDesc[c.animal];
-                } else {
-                    img.src = `assets/card_back.jpg`;
-                    nameEl.textContent = 'Carte Cachée';
-                    powerEl.textContent = '???';
-                }
             }
+            img.src = `assets/card_${c.animal}.jpg`;
+            nameEl.textContent = animalNames[c.animal];
+            powerEl.textContent = powerDesc[c.animal];
             ui.showModal('card-admire-modal');
         }
     }
