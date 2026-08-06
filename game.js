@@ -1025,6 +1025,7 @@ class GameEngine {
 
         if(isMyTurn && this.state.status === 'playing') {
             if(this.state.activeAction === 'place_or_reject') {
+                document.getElementById('drawn-card').style.display = 'flex';
                 actModal.style.display = 'flex';
                 pActions.style.display = 'flex';
                 const c = this.state.pendingPower.card;
@@ -1045,6 +1046,7 @@ class GameEngine {
                 `;
             }
             else if(this.state.activeAction === 'power_target') {
+                document.getElementById('drawn-card').style.display = 'none';
                 const c = this.state.pendingPower.card;
                 ui.toast(`Pouvoir ${c.animal} : Sélectionnez une cible sur le plateau !`);
                 
@@ -1064,13 +1066,13 @@ class GameEngine {
                     let instruction = '';
                     if(c.animal === 'crocodile') {
                         this.crocodileTargeting = true;
-                        instruction = "🐊 Cliquez sur une carte adverse pour l'éliminer.";
+                        instruction = "🐊 Cliquez directement sur une carte adverse pour l'éliminer.";
                     } else if(c.animal === 'monkey') {
                         this.monkeyTargeting = true;
-                        instruction = this.monkeyTarget1 ? "🐒 Cliquez sur la 2ème carte à échanger." : "🐒 Cliquez sur une 1ère carte à échanger.";
+                        instruction = this.monkeyTarget1 ? "🐒 Cliquez sur la 2ème carte." : "🐒 Cliquez sur une 1ère carte à échanger.";
                     } else if(c.animal === 'crab') {
                         this.crabTargeting = true;
-                        instruction = "🦀 Cliquez sur une de vos cartes pour la faire glisser à droite.";
+                        instruction = "🦀 Cliquez sur une de VOS cartes (en bas) pour la décaler à droite.";
                     }
                     
                     actModal.style.display = 'flex';
@@ -1082,6 +1084,7 @@ class GameEngine {
                 }
             }
             else if(this.state.activeAction === 'parrot_give') {
+                document.getElementById('drawn-card').style.display = 'flex';
                 this.parrotGiveTargeting = true;
                 const c = this.state.parrotGiveCard;
                 document.getElementById('drawn-card-img').src = `assets/card_${c.animal}.jpg`;
