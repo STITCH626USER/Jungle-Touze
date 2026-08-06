@@ -1209,7 +1209,7 @@ class GameEngine {
 
     // --- BOT ENGINE ---
     getBotPowerPayload(bot, animal) {
-        let p = {};
+        let p = { cancel: true };
         switch(animal) {
             case 'crocodile':
                 const targets = this.state.players.filter(pl => pl.id !== bot.id && pl.cards.length > 0);
@@ -1271,6 +1271,13 @@ class GameEngine {
                 const c = this.state.pendingPower.card;
                 const payload = this.getBotPowerPayload(bot, c.animal);
                 this.processAction(bot.id, 'execute_power', payload);
+            }
+            else if(this.state.activeAction === 'parrot_give') {
+                const opps = this.state.players.filter(pl => pl.id !== bot.id);
+                if(opps.length > 0) {
+                    const t = opps[Math.floor(Math.random()*opps.length)];
+                    this.processAction(bot.id, 'execute_parrot_give', { targetId: t.id });
+                }
             }
         };
 
