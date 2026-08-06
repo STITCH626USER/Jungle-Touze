@@ -562,6 +562,7 @@ class GameEngine {
         this.crabTargeting = false;
         this.monkeyTargeting = false;
         this.crocodileTargeting = false;
+        this.parrotGiveTargeting = false;
         this.monkeySelectedCards = [];
         if(this.botLivenessTimer) clearTimeout(this.botLivenessTimer);
     }
@@ -674,6 +675,18 @@ class GameEngine {
                 }
                 this.executePower(activePlayer, this.state.pendingPower.card.animal, payload);
                 break;
+                
+            case 'execute_parrot_give':
+                if(this.state.activeAction !== 'parrot_give') return;
+                const opp = this.state.players.find(p => p.id === payload.targetId);
+                if(opp) {
+                    opp.cards.push(this.state.parrotGiveCard);
+                    ui.logHistory(activePlayer.name, `a donné le ${this.state.parrotGiveCard.animal} à ${opp.name}`, 'parrot');
+                    this.resolveChameleonPair(opp);
+                }
+                this.state.parrotGiveCard = null;
+                this.nextTurn();
+                break;
         }
     }
 
@@ -773,9 +786,21 @@ class GameEngine {
                     this.nextTurn(player.id);
                 } else {
                     ui.logHistory(player.name, `s'est trompé. C'était ${nextC.animal}`, 'parrot');
-                    ui.toast("Raté ! Le tour passe.");
-                    arr.push(nextC); // return it
-                    this.nextTurn();
+                    ui.toast(`Raté ! Donnez la carte à un adversaire.`);
+                    
+                    const opponents = this.state.players.filter(p => p.id !== player.id);
+                    if(opponents.length === 1) {
+                        // Auto give to the only opponent
+                        opponents[0].cards.push(nextC);
+                        ui.logHistory(player.name, `a donné le ${nextC.animal} à ${opponents[0].name}`, 'parrot');
+                        this.resolveChameleonPair(opponents[0]);
+                        this.nextTurn();
+                    } else {
+                        // Must choose opponent
+                        this.state.parrotGiveCard = nextC;
+                        this.state.activeAction = 'parrot_give';
+                        this.broadcastState();
+                    }
                 }
                 break;
                 
@@ -905,7 +930,12 @@ class GameEngine {
                 cardsHtml += `<img src="assets/card_${c.animal}.jpg" data-cardid="${c.id}" onclick="game.handleCardClick('${p.id}', '${c.id}')">`;
             });
             
-            oppList.innerHTML += `<div class="opponent-slot ${isActive ? 'active-turn' : ''}" data-id="${p.id}">
+            let clickHandler = '';
+            if(this.parrotGiveTargeting && p.id !== this.myId) {
+                clickHandler = `onclick="game.sendAction('execute_parrot_give', {targetId: '${p.id}'})" style="cursor:pointer; border-color:var(--primary);"`;
+            }
+
+            oppList.innerHTML += `<div class="opponent-slot ${isActive ? 'active-turn' : ''}" data-id="${p.id}" ${clickHandler}>
                 <div class="opp-header">
                     <div class="opp-name">${p.isBot?'🤖':''} ${p.name}</div>
                     <div class="opp-score">🏆 ${p.cards.length}/8</div>
@@ -1019,26 +1049,40 @@ class GameEngine {
                             <span>${a.name}</span>
                         </div>`;
                     });
-                } else if(c.animal === 'crocodile') {
-                    this.crocodileTargeting = true;
-                    ui.toast("🐊 Choisissez une carte adverse à éliminer");
-                } else if(c.animal === 'monkey') {
-                    this.monkeyTargeting = true;
-                    if(!this.monkeyTarget1) ui.toast("🐒 Choisissez une première carte à échanger");
-                } else if(c.animal === 'crab') {
-                    this.crabTargeting = true;
-                    ui.toast("🦀 Choisissez une carte à faire glisser");
-                }
-                
-                // Show cancel button
-                cActions.style.display = 'flex';
-                if(c.animal !== 'parrot') {
-                    actModal.style.display = 'flex';
-                    cActions.innerHTML = `<button class="btn btn-secondary" onclick="game.sendAction('execute_power', {cancel: true})">Passer / Annuler le pouvoir</button>`;
                 } else {
-                    cActions.innerHTML = '';
-                    actModal.style.display = 'none';
+                    let instruction = '';
+                    if(c.animal === 'crocodile') {
+                        this.crocodileTargeting = true;
+                        instruction = "🐊 Cliquez sur une carte adverse pour l'éliminer.";
+                    } else if(c.animal === 'monkey') {
+                        this.monkeyTargeting = true;
+                        instruction = this.monkeyTarget1 ? "🐒 Cliquez sur la 2ème carte à échanger." : "🐒 Cliquez sur une 1ère carte à échanger.";
+                    } else if(c.animal === 'crab') {
+                        this.crabTargeting = true;
+                        instruction = "🦀 Cliquez sur une de vos cartes pour la faire glisser à droite.";
+                    }
+                    
+                    actModal.style.display = 'flex';
+                    cActions.style.display = 'flex';
+                    cActions.innerHTML = `
+                        <div style="color:white; font-weight:bold; text-align:center; font-size:1.1rem;">${instruction}</div>
+                        <button class="btn btn-secondary" onclick="game.sendAction('execute_power', {cancel: true})">Passer / Ne pas utiliser</button>
+                    `;
                 }
+            }
+            else if(this.state.activeAction === 'parrot_give') {
+                this.parrotGiveTargeting = true;
+                const c = this.state.parrotGiveCard;
+                document.getElementById('drawn-card-img').src = `assets/card_${c.animal}.jpg`;
+                actModal.style.display = 'flex';
+                cActions.style.display = 'flex';
+                cActions.innerHTML = `
+                    <div style="color:white; font-weight:bold; text-align:center; font-size:1.1rem; line-height:1.4;">
+                        Raté ! 🦜<br><br>
+                        Vous devez donner cette carte.<br>
+                        <b>Cliquez sur l'espace d'un adversaire</b> en haut pour lui donner.
+                    </div>
+                `;
             }
         }
         
