@@ -906,8 +906,10 @@ class GameEngine {
             });
             
             oppList.innerHTML += `<div class="opponent-slot ${isActive ? 'active-turn' : ''}" data-id="${p.id}">
-                <div class="opp-name">${p.isBot?'🤖':''} ${p.name}</div>
-                <div class="opp-score">🏆 ${p.cards.length}/8</div>
+                <div class="opp-header">
+                    <div class="opp-name">${p.isBot?'🤖':''} ${p.name}</div>
+                    <div class="opp-score">🏆 ${p.cards.length}/8</div>
+                </div>
                 <div class="opp-cards-mini">${cardsHtml}</div>
             </div>`;
         });
