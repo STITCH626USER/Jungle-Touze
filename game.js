@@ -877,7 +877,7 @@ class GameEngine {
     }
 
     quitGame() {
-        ui.hideModal('quit-modal');
+        ui.hideModal('quit-confirm-modal');
         if(this.isHost) {
             this.conns.forEach(c => c.close());
             if(this.peer) this.peer.destroy();
@@ -927,15 +927,26 @@ class GameEngine {
             
             let cardsHtml = '';
             p.cards.forEach(c => {
-                cardsHtml += `<img src="assets/card_${c.animal}.jpg" data-cardid="${c.id}" onclick="game.handleCardClick('${p.id}', '${c.id}')">`;
+                let cl = "";
+                if(this.state.activeAction === 'power_target') {
+                    const pending = this.state.pendingPower.card.animal;
+                    if(pending === 'crocodile' || pending === 'monkey') cl += ' targetable';
+                    if(this.monkeyTarget1 && this.monkeyTarget1.cId === c.id) cl += ' selected-target';
+                }
+                if(this.state.status === 'ended' && this.state.winner && this.state.winner.id === p.id) {
+                    cl += ' winning-card';
+                }
+                cardsHtml += `<img src="assets/card_${c.animal}.jpg" class="${cl}" data-cardid="${c.id}" onclick="game.handleCardClick('${p.id}', '${c.id}')">`;
             });
             
             let clickHandler = '';
+            let slotClass = isActive ? 'active-turn' : '';
             if(this.parrotGiveTargeting && p.id !== this.myId) {
-                clickHandler = `onclick="game.sendAction('execute_parrot_give', {targetId: '${p.id}'})" style="cursor:pointer; border-color:var(--primary);"`;
+                clickHandler = `onclick="game.sendAction('execute_parrot_give', {targetId: '${p.id}'})"`;
+                slotClass += ' targetable';
             }
 
-            oppList.innerHTML += `<div class="opponent-slot ${isActive ? 'active-turn' : ''}" data-id="${p.id}" ${clickHandler}>
+            oppList.innerHTML += `<div class="opponent-slot ${slotClass}" data-id="${p.id}" ${clickHandler}>
                 <div class="opp-header">
                     <div class="opp-name">${p.isBot?'🤖':''} ${p.name}</div>
                     <div class="opp-score">🏆 ${p.cards.length}/8</div>
