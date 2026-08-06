@@ -988,16 +988,16 @@ class GameEngine {
                 document.getElementById('drawn-card-img').src = `assets/card_${c.animal}.jpg`;
                 this.isPlacingCard = true;
                 pActions.innerHTML = `
-                    <div style="display:flex; flex-direction:column; gap:12px; width:100%;">
-                        <div style="display:flex; gap:12px;">
-                            <button class="btn btn-action btn-main" style="flex:1; padding:16px 5px; border-radius:20px; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:4px;" onclick="game.sendAction('place_card', {side:'left'})">
-                                <div style="font-size:1.2rem; font-weight:900;">⬅ Placer à Gauche</div>
+                    <div style="display:flex; flex-direction:column; gap:8px; width:100%;">
+                        <div style="display:flex; gap:8px;">
+                            <button class="btn btn-action btn-main" style="flex:1; padding:10px 5px; border-radius:16px; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:4px;" onclick="game.sendAction('place_card', {side:'left'})">
+                                <div style="font-size:1.1rem; font-weight:900;">⬅ Placer à Gauche</div>
                             </button>
-                            <button class="btn btn-action btn-main" style="flex:1; padding:16px 5px; border-radius:20px; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:4px;" onclick="game.sendAction('place_card', {side:'right'})">
-                                <div style="font-size:1.2rem; font-weight:900;">Placer à Droite ➡</div>
+                            <button class="btn btn-action btn-main" style="flex:1; padding:10px 5px; border-radius:16px; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:4px;" onclick="game.sendAction('place_card', {side:'right'})">
+                                <div style="font-size:1.1rem; font-weight:900;">Placer à Droite ➡</div>
                             </button>
                         </div>
-                        <button class="btn btn-action btn-reject" style="width:100%; border-radius:20px; padding:16px;" onclick="game.sendAction('reject')">❌ Jeter la carte</button>
+                        <button class="btn btn-action btn-reject" style="width:100%; border-radius:16px; padding:12px;" onclick="game.sendAction('reject')">❌ Jeter la carte</button>
                     </div>
                 `;
             }
