@@ -741,6 +741,16 @@ class GameEngine {
                     const c2 = p2.cards.find(c => c.id === payload.cardId);
                     p2.cards = p2.cards.filter(c => c.id !== payload.cardId);
                     ui.logHistory(player.name, `a éliminé le ${c2.animal} de ${p2.name}`, 'crocodile');
+                    
+                    this.state.lastAnimation = {
+                        id: Date.now(),
+                        type: 'crocodile_attack',
+                        attackerId: player.id,
+                        targetId: p2.id,
+                        targetCardAnimal: c2.animal,
+                        targetCardId: c2.id
+                    };
+
                     if (player.id !== this.myId) {
                         const anName = animalNames[c2.animal] || c2.animal;
                         ui.toast(`🐊 ${player.name} élimine le ${anName} de ${p2.name} !`);
@@ -1022,6 +1032,8 @@ class GameEngine {
                         row.style.transition = 'box-shadow 0.5s';
                         setTimeout(() => row.style.boxShadow = 'none', 1000);
                     }
+                } else if(this.state.lastAnimation.type === 'crocodile_attack') {
+                    ui.animateCrocodileAttack(this.state.lastAnimation);
                 }
             }
 
