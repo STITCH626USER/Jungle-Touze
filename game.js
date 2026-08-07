@@ -496,6 +496,12 @@ class GameEngine {
         // Show the roll button, hide bots roll until player rolls
         const btn = document.getElementById('btn-roll-dice');
         if(btn) btn.style.display = 'block';
+        
+        const box = document.getElementById('dice-visual-box');
+        if(box) {
+            box.textContent = '🎲';
+            box.style.animation = 'none';
+        }
     }
     
     rollMyDice() {
@@ -516,6 +522,15 @@ class GameEngine {
                 const roll = Math.floor(Math.random()*6)+1;
                 rolls.push({ id: p.id, name: p.name, roll: roll });
                 if(scoresList) scoresList.innerHTML += `<div><strong>${p.name}</strong> : 🎲 ${roll}</div>`;
+                
+                const box = document.getElementById('dice-visual-box');
+                if(box) {
+                    box.style.animation = 'none';
+                    box.offsetHeight; // trigger reflow
+                    box.style.animation = 'diceRoll 0.5s ease-out';
+                    box.textContent = roll;
+                }
+                
                 soundEngine.play('dice');
                 rollIndex++;
                 setTimeout(rollNext, 800);
