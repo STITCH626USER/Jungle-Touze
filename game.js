@@ -81,7 +81,7 @@ const ui = {
             chameleon: "Joker magique ! Attention : 2 Caméléons s'annulent.",
             octopus: "Assemblez 3 paires d'animaux quelconques pour gagner.",
             crocodile: "Mange la carte d'un adversaire !",
-            monkey: "Échangez deux cartes n'importe où sur le plateau.",
+            monkey: "Volez une carte, le singe prend sa place !",
             crab: "Faites glisser cette carte à la fin de votre rangée.",
             parrot: "Devinez la prochaine carte d'une pioche pour la gagner.",
             hermit_crab: "Gagnez un tour supplémentaire si vous avez un Crabe."
@@ -151,6 +151,80 @@ const ui = {
         setTimeout(() => {
             ghost.remove();
         }, 700);
+    },
+
+    animateMonkeyAttack(anim) {
+        const overlay = document.createElement('div');
+        overlay.style.position = 'fixed';
+        overlay.style.inset = '0';
+        overlay.style.zIndex = '999999';
+        overlay.style.pointerEvents = 'none';
+        document.body.appendChild(overlay);
+
+        const isAttackerMe = anim.attackerId === game.myId;
+        
+        let startY = '-50vh';
+        if(isAttackerMe) startY = '50vh';
+
+        // 1. Find opponent's slot position to aim for
+        const targetSlot = document.querySelector(`.opponent-slot[data-id="${anim.targetId}"]`);
+        let targetRect = { top: window.innerHeight/4, left: window.innerWidth/2, width: 80, height: 120 };
+        if (targetSlot) {
+            targetRect = targetSlot.getBoundingClientRect();
+        }
+
+        const monkeyHead = document.createElement('div');
+        monkeyHead.style.width = '160px';
+        monkeyHead.style.height = '160px';
+        monkeyHead.style.backgroundImage = `url(assets/card_monkey.jpg)`;
+        monkeyHead.style.backgroundSize = '240px 360px';
+        monkeyHead.style.backgroundPosition = 'center 35%';
+        monkeyHead.style.backgroundRepeat = 'no-repeat';
+        monkeyHead.style.clipPath = 'circle(40% at 50% 50%)';
+        monkeyHead.style.position = 'absolute';
+        
+        monkeyHead.style.top = `calc(50% + ${startY})`;
+        monkeyHead.style.left = '50%';
+        monkeyHead.style.transform = `translate(-50%, -50%) scale(0.5) rotate(-180deg)`;
+        monkeyHead.style.transition = 'all 0.6s cubic-bezier(0.34, 1.56, 0.64, 1)';
+        monkeyHead.style.filter = 'drop-shadow(0 15px 30px rgba(0,0,0,0.8))';
+        overlay.appendChild(monkeyHead);
+
+        const title = document.createElement('div');
+        title.style.position = 'absolute';
+        title.style.top = '15%';
+        title.style.left = '50%';
+        title.style.transform = 'translateX(-50%)';
+        title.style.color = '#f39c12';
+        title.style.fontSize = 'clamp(1.5rem, 5vw, 2.5rem)';
+        title.style.fontWeight = '900';
+        title.style.textShadow = '0 0 20px rgba(243,156,18,0.8)';
+        title.style.textAlign = 'center';
+        title.style.opacity = '0';
+        title.style.transition = 'opacity 0.4s';
+        title.innerHTML = isAttackerMe ? "VOL DE CARTE ! 🐒" : "ATTAQUE SINGE ! 🐒";
+        overlay.appendChild(title);
+
+        setTimeout(() => {
+            title.style.opacity = '1';
+            
+            monkeyHead.style.top = `${targetRect.top + targetRect.height/2}px`;
+            monkeyHead.style.left = `${targetRect.left + targetRect.width/2}px`;
+            monkeyHead.style.transform = `translate(-50%, -50%) scale(0.8) rotate(360deg)`;
+            
+            if(soundEngine) soundEngine.play('monkey');
+            
+            setTimeout(() => {
+                monkeyHead.style.transition = 'all 0.3s ease-in';
+                monkeyHead.style.transform = `translate(-50%, -50%) scale(0) rotate(720deg)`;
+                monkeyHead.style.opacity = '0';
+                title.style.opacity = '0';
+                
+                setTimeout(() => {
+                    overlay.remove();
+                }, 400);
+            }, 600);
+        }, 50);
     },
     
     showRoundEndModal(winnerData) {
@@ -468,7 +542,7 @@ class GameEngine {
         this.sendAction('execute_power', {guess: this.selectedParrotGuess, guessDeck: deckId});
         ui.hideModal('parrot-modal');
         this.selectedParrotGuess = null;
-        document.getElementById('parrot-placement-actions').style.display = 'none';
+        document.getElementById('parrot-placement-actions').style.display = 'flex';
     }
 
     // --- CORE GAME LOOP ---
@@ -760,34 +834,42 @@ class GameEngine {
                 break;
 
             case 'monkey':
-                if(!payload.target1 || !payload.target2) {
+                if(!payload.targetPlayerId) {
                     this.state.activeAction = 'power_target';
                     this.broadcastState();
-                    return; // Wait for targets
+                    return; // Wait for target
                 }
-                // payload { target1: {pId, cId}, target2: {pId, cId} }
-                const p1 = this.state.players.find(p => p.id === payload.target1.pId);
-                const p_2 = this.state.players.find(p => p.id === payload.target2.pId);
-                if(p1 && p_2) {
-                    const idx1 = p1.cards.findIndex(c => c.id === payload.target1.cId);
-                    const idx2 = p_2.cards.findIndex(c => c.id === payload.target2.cId);
-                    if(idx1 > -1 && idx2 > -1) {
-                        const tmp = p1.cards[idx1];
-                        p1.cards[idx1] = p_2.cards[idx2];
-                        p_2.cards[idx2] = tmp;
-                        
-                        const name1 = animalNames[tmp.animal] || tmp.animal;
-                        const name2 = animalNames[p_2.cards[idx2].animal] || p_2.cards[idx2].animal;
-                        ui.logHistory(player.name, `a échangé le ${name1} de ${p1.name} avec le ${name2} de ${p_2.name}`, 'monkey');
-                        
-                        if (player.id !== this.myId) {
-                            ui.toast(`🐒 ${player.name} a échangé des cartes !`);
-                        }
-                        this.resolveChameleonPair(p1);
-                        this.resolveChameleonPair(p_2);
-                    }
+                const p2M = this.state.players.find(p => p.id === payload.targetPlayerId);
+                if(p2M) {
+                    const myMonkeyIdx = player.cards.findIndex(c => c.id === this.state.pendingPower.card.id);
+                    if (myMonkeyIdx === -1) { this.nextTurn(); return; }
+                    
+                    const monkeyCard = player.cards.splice(myMonkeyIdx, 1)[0];
+                    const targetIdx = p2M.cards.findIndex(c => c.id === payload.cardId);
+                    if (targetIdx === -1) { player.cards.push(monkeyCard); this.nextTurn(); return; }
+                    
+                    const stolenCard = p2M.cards[targetIdx];
+                    p2M.cards[targetIdx] = monkeyCard;
+                    
+                    this.state.lastAnimation = {
+                        id: Date.now(),
+                        type: 'monkey_attack',
+                        attackerId: player.id,
+                        targetId: p2M.id,
+                        targetCardAnimal: stolenCard.animal,
+                        targetCardId: stolenCard.id
+                    };
+                    
+                    this.state.pendingPower = { card: stolenCard, monkeySuccess: true };
+                    this.state.activeAction = 'place_or_reject';
+                    
+                    ui.logHistory(player.name, `a volé le ${stolenCard.animal} de ${p2M.name} avec son Singe`, 'monkey');
+                    
+                    this.resolveChameleonPair(p2M); 
+                    this.broadcastState();
+                } else {
+                    this.nextTurn();
                 }
-                this.nextTurn();
                 break;
 
             case 'crab':
@@ -995,8 +1077,6 @@ class GameEngine {
                     if(this.state.activeAction === 'power_target') {
                         const pending = this.state.pendingPower.card.animal;
                         if(pending === 'crocodile' || pending === 'monkey' || pending === 'crab') cl += ' targetable';
-                        if(this.monkeyTarget1 && this.monkeyTarget1.cId === c.id) cl += ' selected-target';
-                        if(this.crabTargetCard && this.crabTargetCard.cId === c.id) cl += ' selected-target';
                     }
                     if(this.state.status === 'ended' && this.state.winner && this.state.winner.id === p.id) {
                         cl += ' winning-card';
@@ -1032,8 +1112,8 @@ class GameEngine {
                         row.style.transition = 'box-shadow 0.5s';
                         setTimeout(() => row.style.boxShadow = 'none', 1000);
                     }
-                } else if(this.state.lastAnimation.type === 'crocodile_attack') {
-                    ui.animateCrocodileAttack(this.state.lastAnimation);
+                } else if(this.state.lastAnimation.type === 'monkey_attack') {
+                    ui.animateMonkeyAttack(this.state.lastAnimation);
                 }
             }
 
@@ -1121,6 +1201,8 @@ class GameEngine {
                     let titleHtml = '';
                     if (this.state.pendingPower.parrotSuccess) {
                         titleHtml = `<div style="color:var(--gold); font-weight:bold; text-align:center; font-size:1.2rem; margin-bottom:10px;">Gagné ! 🦜<br>Vous avez deviné juste ! Placez-la :</div>`;
+                    } else if (this.state.pendingPower.monkeySuccess) {
+                        titleHtml = `<div style="color:var(--gold); font-weight:bold; text-align:center; font-size:1.2rem; margin-bottom:10px;">Vol réussi ! 🐒<br>Où placer la carte volée ?</div>`;
                     }
                     
                     pActions.innerHTML = `
@@ -1162,7 +1244,7 @@ class GameEngine {
                             instruction = "🐊 Cliquez directement sur une carte adverse pour l'éliminer.";
                         } else if(c.animal === 'monkey') {
                             this.monkeyTargeting = true;
-                            instruction = this.monkeyTarget1 ? "🐒 Cliquez sur la 2ème carte." : "🐒 Cliquez sur une 1ère carte à échanger.";
+                            instruction = "🐒 Cliquez sur une carte à voler.";
                         } else if(c.animal === 'crab') {
                             this.crabTargeting = true;
                             if (this.crabTargetCard) {
@@ -1241,8 +1323,6 @@ class GameEngine {
                 const pending = this.state.pendingPower.card.animal;
                 if(isMe && pending === 'crab') cl += ' targetable';
                 if(!isMe && (pending === 'crocodile' || pending === 'monkey')) cl += ' targetable';
-                if(isMe && pending === 'monkey') cl += ' targetable';
-                if(this.monkeyTarget1 && this.monkeyTarget1.cId === c.id) cl += ' selected-target';
                 if(this.crabTargetCard && this.crabTargetCard.cId === c.id) cl += ' selected-target';
             }
             if(this.state.status === 'ended' && this.state.winner && this.state.winner.cards.some(wc => wc.id === c.id)) {
@@ -1267,17 +1347,12 @@ class GameEngine {
             this.crocodileTargeting = false;
             this.sendAction('execute_power', { targetPlayerId: playerId, cardId });
         } else if(this.monkeyTargeting) {
-            if(!this.monkeyTarget1) {
-                this.monkeyTarget1 = { pId: playerId, cId: cardId };
-                ui.toast("🐒 Choisissez la 2ème carte");
-                this.renderState();
-            } else {
-                const target1 = this.monkeyTarget1;
-                const target2 = { pId: playerId, cId: cardId };
-                this.monkeyTarget1 = null;
-                this.monkeyTargeting = false;
-                this.sendAction('execute_power', { target1, target2 });
-            }
+            if(playerId === this.myId) return; // Cannot target self
+            this.monkeyTargeting = false;
+            this.sendAction('execute_power', { targetPlayerId: playerId, cardId });
+        } else if(this.parrotGiveTargeting) {
+            this.sendAction('execute_parrot_give', { targetId: playerId });
+            this.parrotGiveTargeting = false;
         } else if(this.crabTargeting) {
             const p = this.state.players.find(x => x.id === playerId);
             if(!p) return;
@@ -1288,7 +1363,6 @@ class GameEngine {
                 this.renderState();
             }
         } else {
-            // OUBLI 13 - Card Admire
             const p = this.state.players.find(x => x.id === playerId);
             if(!p) return;
             const c = p.cards.find(x => x.id === cardId);
@@ -1299,7 +1373,7 @@ class GameEngine {
                 chameleon: 'Joker magique ! 2 caméléons = détruits.',
                 octopus: 'Victoire: 3 paires différentes',
                 crocodile: 'Élimine 1 carte chez un adversaire.',
-                monkey: 'Échange 2 cartes n\'importe où.',
+                monkey: 'Volez une carte à un adversaire, le singe prend sa place.',
                 crab: 'Faites glisser cette carte dans la rangée = 1 pioche sup.',
                 parrot: 'Devinez la prochaine carte = 1 pioche sup.',
                 hermit_crab: 'Rejouez si vous avez un Crabe dans votre jeu.'
@@ -1375,16 +1449,11 @@ class GameEngine {
                 }
                 break;
             case 'monkey':
-                const allCards = [];
-                this.state.players.forEach(pl => {
-                    pl.cards.forEach(c => allCards.push({pId: pl.id, cId: c.id}));
-                });
-                if(allCards.length >= 2) {
-                    for (let i = allCards.length - 1; i > 0; i--) {
-                        const j = Math.floor(Math.random() * (i + 1));
-                        [allCards[i], allCards[j]] = [allCards[j], allCards[i]];
-                    }
-                    p = { target1: allCards[0], target2: allCards[1] };
+                const targetsMonkey = this.state.players.filter(pl => pl.id !== bot.id && pl.cards.length > 0);
+                if(targetsMonkey.length > 0) {
+                    const t = targetsMonkey[Math.floor(Math.random()*targetsMonkey.length)];
+                    const rc = t.cards[Math.floor(Math.random()*t.cards.length)];
+                    p = { targetPlayerId: t.id, cardId: rc.id };
                 }
                 break;
             case 'crab':
