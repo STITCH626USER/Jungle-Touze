@@ -1574,14 +1574,8 @@ class GameEngine {
             case 'monkey': {
                 const opponents = this.state.players.filter(pl => pl.id !== bot.id && pl.cards.length > 0);
                 if(opponents.length > 0) {
-                    opponents.sort((a, b) => getThreatScore(b) - getThreatScore(a));
-                    const targetOpp = opponents[0];
-                    
-                    // Find a card to steal: preferably one the bot doesn't have, or just random
-                    const botHas = new Set(bot.cards.map(c => c.animal));
-                    let targetCard = targetOpp.cards.find(c => !botHas.has(c.animal));
-                    if (!targetCard) targetCard = targetOpp.cards[Math.floor(Math.random() * targetOpp.cards.length)];
-
+                    const targetOpp = opponents[Math.floor(Math.random() * opponents.length)];
+                    const targetCard = targetOpp.cards[Math.floor(Math.random() * targetOpp.cards.length)];
                     p = { targetPlayerId: targetOpp.id, cardId: targetCard.id };
                 }
                 break;
