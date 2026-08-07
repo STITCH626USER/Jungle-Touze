@@ -836,7 +836,8 @@ class GameEngine {
                 if(this.state.status !== 'playing') return;
 
                 const activePowers = ['crocodile', 'monkey', 'crab', 'parrot'];
-                if (activePowers.includes(c.animal)) {
+                // Only trigger power if it was drawn from the deck (not a stolen card)
+                if (activePowers.includes(c.animal) && !this.state.pendingPower.monkeySuccess) {
                     this.state.activeAction = 'power_target';
                     this.broadcastState();
                 } else if (c.animal === 'hermit_crab') {
