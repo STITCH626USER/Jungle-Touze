@@ -49,10 +49,10 @@
     </g>
   </defs>
   
-  <g transform="translate(200, 30)" opacity="0.7">
+  <g transform="translate(200, -30)" opacity="0.7">
     <use href="#synth-sunset" />
   </g>
-  <g transform="translate(252, 60) scale(4)" opacity="0.9">
+  <g transform="translate(252, 0) scale(4)" opacity="0.9">
     <use href="#neon-palm" class="neon-tube" />
   </g>
   
