@@ -653,7 +653,7 @@ class GameEngine {
             this.conns.forEach(c => c.send({ type: 'STATE', state: this.state }));
             this.renderState();
             // Trigger bot actions
-            const botActionStates = ['draw', 'place_or_reject', 'power_target'];
+            const botActionStates = ['draw', 'place_or_reject', 'power_target', 'parrot_failed'];
             if(this.state.status === 'playing' && botActionStates.includes(this.state.activeAction)) {
                 const ap = this.state.players[this.state.turnIndex];
                 if(ap && ap.isBot) {
@@ -998,6 +998,15 @@ class GameEngine {
                 }
                 break;
                 
+            case 'acknowledge_parrot_fail':
+                if (this.state.activeAction === 'parrot_failed') {
+                    ui.hideModal('parrot-result-modal');
+                    this.state.pendingPower = null;
+                    this.nextTurn();
+                }
+                break;
+
+                
             case 'REMATCH':
                 this.state.status = 'setup';
                 this.state.players.forEach(p => p.cards = []);
@@ -1207,7 +1216,15 @@ class GameEngine {
                 // First draw next card
                 const deckId = payload.guessDeck || 1;
                 const arr = deckId === 1 ? this.state.deckLeft : this.state.deckRight;
-                if(arr.length === 0) { this.nextTurn(); return; }
+                if(arr.length === 0) {
+                    ui.toast("La pioche est vide ! Le pouvoir Perroquet échoue.");
+                    this.state.activeAction = 'animating';
+                    this.broadcastState();
+                    setTimeout(() => {
+                        if(this.state && this.state.status === 'playing') this.nextTurn();
+                    }, 2000);
+                    return; 
+                }
                 const nextC = arr.shift();
                 const realName = animalNames[nextC.animal] || nextC.animal;
                 
@@ -1222,23 +1239,18 @@ class GameEngine {
                     this.broadcastState();
                 } else {
                     this.addHistory(player.name, `s'est trompé. A dit ${guessName} mais c'était ${realName}`, 'parrot');
-                    ui.toast(player.id === this.myId
-                        ? `Raté ! C'était un(e) ${realName}. La carte reste sur la pioche.`
-                        : `🦜 ${player.name} s'est trompé ! C'était un(e) ${realName}.`);
                     
                     nextC.faceUp = true;
                     arr.unshift(nextC);
                     this.state.lastRejected = { animal: nextC.animal, deck: deckId };
                     
-                    // Broadcast FIRST so everyone sees the card face-up on the deck
-                    // Then wait before going to next turn so it's clearly visible
-                    this.state.activeAction = 'animating';
+                    this.state.pendingPower = { 
+                        failedGuess: guessName, 
+                        realCard: nextC, 
+                        playerId: player.id 
+                    };
+                    this.state.activeAction = 'parrot_failed';
                     this.broadcastState();
-                    setTimeout(() => {
-                        if(this.state && this.state.status === 'playing') {
-                            this.nextTurn();
-                        }
-                    }, 1500);
                 }
                 break;
                 
@@ -1612,6 +1624,23 @@ class GameEngine {
                         cActions.innerHTML = actionsHtml;
                     }
                 }
+                else if (this.state.activeAction === 'parrot_failed') {
+                    document.getElementById('drawn-card').style.display = 'none';
+                    const titleEl = document.getElementById('parrot-result-title');
+                    const descEl = document.getElementById('parrot-result-desc');
+                    const imgEl = document.getElementById('parrot-result-img');
+                    
+                    const p = this.state.pendingPower;
+                    if(p) {
+                        const realName = animalNames[p.realCard.animal] || p.realCard.animal;
+                        titleEl.innerHTML = `<span style="color:#ff6b6b">Perdu !</span>`;
+                        descEl.innerHTML = `Vous aviez parié <strong>${p.failedGuess}</strong>,<br>mais c'était un(e) <strong>${realName}</strong>.`;
+                        imgEl.src = `assets/card_${p.realCard.animal}.jpg`;
+                        imgEl.style.display = 'inline-block';
+                    }
+                    
+                    ui.showModal('parrot-result-modal');
+                }
             }
             
             if(this.state.pendingPower && this.state.pendingPower.showLove) {
@@ -1948,6 +1977,14 @@ class GameEngine {
                     const payload = this.getBotPowerPayload(bot, animal);
                     console.log(`[BOT ${bot.name}] Executing power: ${animal}`, payload);
                     this.processAction(bot.id, 'execute_power', payload);
+                }
+                else if(this.state.activeAction === 'parrot_failed') {
+                    // Delay slightly so the bot doesn't immediately dismiss the parrot result
+                    setTimeout(() => {
+                        if (this.state.players[this.state.turnIndex] && this.state.players[this.state.turnIndex].id === bot.id) {
+                            this.processAction(bot.id, 'acknowledge_parrot_fail', {});
+                        }
+                    }, 1000);
                 }
             } catch(e) {
                 console.error("Bot action failed:", e);

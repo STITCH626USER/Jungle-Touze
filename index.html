@@ -39,7 +39,7 @@
                 <button class="btn btn-main" onclick="game.hostRoom()">Créer un Salon</button>
                 <button class="btn btn-secondary" onclick="ui.showScreen('screen-join')">Rejoindre</button>
                 <button id="btn-install-app" class="btn" style="display:none; background:linear-gradient(135deg,#1e90ff,#3742fa);" onclick="ui.installPWA()">Installer l'application</button>
-                <button class="btn btn-rules" onclick="ui.showHelpModal()">Règles du Jeu <span class="version-pill">v2.5</span></button>
+                <button class="btn btn-rules" onclick="ui.showHelpModal()">Règles du Jeu <span class="version-pill">v2.6</span></button>
             </div>
         </div>
 
@@ -206,6 +206,15 @@
                 <button class="btn-action-place" onclick="game.sendParrotGuess('left')">⬅️ Gauche</button>
                 <button class="btn-action-place" onclick="game.sendParrotGuess('right')">Droite ➡️</button>
             </div>
+        </div>
+    </div>
+
+    <div id="parrot-result-modal" class="modal-overlay" style="display:none;">
+        <div class="modal-content glass" style="text-align: center;">
+            <h2 id="parrot-result-title" style="margin-bottom:10px;"></h2>
+            <img id="parrot-result-img" src="" style="width:120px; border-radius:12px; margin: 10px 0; background:white; display:none;">
+            <p id="parrot-result-desc" style="color:var(--text-dim); margin-bottom:20px;"></p>
+            <button class="btn btn-main" style="width:100%; border-radius:50px;" onclick="game.sendAction('acknowledge_parrot_fail')">Continuer</button>
         </div>
     </div>
 
