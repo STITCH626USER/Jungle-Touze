@@ -232,8 +232,8 @@ input[type="text"]:focus { outline: none; border-color: var(--secondary); box-sh
 
 /* Nouveau Ciblage & Animations */
 .targetable { border-color: var(--primary) !important; animation: quiverTarget 0.5s infinite ease-in-out; cursor: crosshair; z-index: 50; position: relative; }
-.targetable:hover { transform: scale(1.2) !important; animation: none !important; box-shadow: 0 0 30px rgba(255,51,102,1) !important; }
-.selected-target { box-shadow: 0 0 30px rgba(255,215,0,1) !important; border-color: var(--gold) !important; transform: scale(1.1); animation: none !important; }
+.targetable:hover { transform: scale(1.2) !important; animation: none !important; box-shadow: 0 0 30px rgba(255,51,102,1) !important; z-index: 200 !important; }
+.selected-target { box-shadow: 0 0 30px rgba(255,215,0,1) !important; border-color: var(--gold) !important; transform: scale(1.1); animation: none !important; z-index: 150 !important; }
 @keyframes quiverTarget {
   0% { transform: scale(1.1) rotate(0deg); box-shadow: 0 0 15px 3px rgba(255,51,102,0.8); }
   25% { transform: scale(1.1) rotate(3deg); box-shadow: 0 0 25px 6px rgba(255,51,102,1); }
