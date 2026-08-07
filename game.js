@@ -451,8 +451,12 @@ class GameEngine {
         this.myName = name;
         this.roomCode = this.generateRoomCode();
         this.isHost = true;
+        // CRITICAL: set myId to a non-empty string BEFORE pushing player into state
+        // If myId stays '' (falsy), checks like !payload.targetPlayerId will incorrectly
+        // treat the host as "no target" when a client tries to target them.
+        this.myId = 'JT-' + this.roomCode;
         try {
-            this.peer = new Peer("JT-" + this.roomCode);
+            this.peer = new Peer(this.myId);
             
             this.peer.on('connection', (conn) => {
                 this.conns.push(conn);
