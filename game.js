@@ -15,53 +15,9 @@ const ANIMALS = [
     { id: 'hermit_crab', name: 'Bernard l\'Hermite', power: 'Rejouez si vous avez un Crabe' }
 ];
 
-// --- SOUND ENGINE ---
-const soundEngine = {
-    muted: localStorage.getItem('jt_muted') === 'true',
-    sounds: {
-        lion: new Audio('assets/sfx_lion.mp3'),
-        monkey: new Audio('assets/sfx_monkey.mp3'),
-        crab: new Audio('assets/sfx_crab.mp3'),
-        parrot: new Audio('assets/sfx_parrot.mp3'),
-        chameleon: new Audio('assets/sfx_chameleon.mp3'),
-        octopus: new Audio('assets/sfx_octopus.mp3'),
-        crocodile: new Audio('assets/sfx_crocodile.mp3'),
-        hermit_crab: new Audio('assets/sfx_hermit.mp3'),
-        dice: new Audio('assets/sfx_dice.mp3'),
-        win: new Audio('assets/sfx_win.mp3')
-    },
-    init() {
-        this.updateBtn();
-    },
-    play(id) {
-        if (this.muted) return;
-        const snd = this.sounds[id];
-        if (snd) {
-            snd.currentTime = 0;
-            // Catch error silently for autoplay policies
-            const playPromise = snd.play();
-            if (playPromise !== undefined) {
-                playPromise.catch(e => console.log('Audio play prevented:', e));
-            }
-        }
-    },
-    toggleMute() {
-        this.muted = !this.muted;
-        localStorage.setItem('jt_muted', this.muted);
-        this.updateBtn();
-    },
-    initAudioContext() {
-        for(let key in this.sounds) {
-            this.sounds[key].load();
-        }
-        document.removeEventListener('touchstart', () => this.initAudioContext());
-        document.removeEventListener('click', () => this.initAudioContext());
-    },
-    updateBtn() {
-        const btn = document.getElementById('btn-sound-toggle');
-        if (btn) btn.textContent = this.muted ? '🔇' : '🔊';
-    }
-};
+// Son désactivé — stub pour compatibilité
+const soundEngine = { play() {}, init() {}, toggleMute() {}, updateBtn() {}, initAudioContext() {} };
+
 
 // --- UI MANAGER ---
 const ui = {
@@ -98,7 +54,7 @@ const ui = {
         });
     },
     showHistoryModal() { this.showModal('history-modal'); },
-    showQuitConfirmModal() { this.showModal('quit-modal'); },
+    showQuitConfirmModal() { this.showModal('quit-confirm-modal'); },
     toast(msg) {
         const pill = document.createElement('div');
         pill.className = 'toast-pill';
@@ -351,7 +307,7 @@ const ui = {
         const isMe = winnerData.id === game.myId;
         
         document.getElementById('round-end-title').textContent = isMe ? `🎉 VOUS REMPORTEZ LA PARTIE !` : `❌ ${winnerData.name.toUpperCase()} REMPORTE LA PARTIE !`;
-        document.getElementById('round-end-subtitle').textContent = isMe ? "Champion(ne) de la Jungle Touze !" : "Défaite ! " + winnerData.reason;
+        document.getElementById('round-end-subtitle').textContent = isMe ? "Champion(ne) de la Jungle Touze !" : "La victoire vous échappe...";
         if (isMe) {
             soundEngine.play('win');
             this.playConfetti();
@@ -359,12 +315,25 @@ const ui = {
         
         const cardsDiv = document.getElementById('round-end-cards');
         cardsDiv.innerHTML = '';
-        winnerData.cards.forEach(c => {
-            cardsDiv.innerHTML += `<img src="assets/card_${c.animal}.jpg" style="width:60px; aspect-ratio:2/3; border-radius:10px; border:3px solid var(--gold); box-shadow:0 0 20px rgba(255,215,0,0.6); object-fit:contain; background:white;">`;
+        winnerData.cards.forEach((c, index) => {
+            cardsDiv.innerHTML += `<img src="assets/card_${c.animal}.jpg" style="width:60px; aspect-ratio:2/3; border-radius:10px; border:3px solid var(--gold); box-shadow:0 0 20px rgba(255,215,0,0.6); object-fit:contain; background:white; transform:scale(0); animation:bounceIn 0.5s cubic-bezier(0.34,1.56,0.64,1) forwards; animation-delay:${index * 0.1}s;">`;
         });
         
         const scoresDiv = document.getElementById('round-end-scores');
-        if(scoresDiv) scoresDiv.innerHTML = '';
+        if(scoresDiv) {
+            scoresDiv.innerHTML = `
+                <div style="font-size:1.1rem; color:rgba(255,255,255,0.8); text-transform:uppercase; letter-spacing:1px; margin-bottom:5px;">Victoire validée par :</div>
+                <div style="font-size:1.6rem; font-weight:900; color:var(--gold); text-shadow:0 0 15px rgba(255,215,0,0.5); animation:pulse-turn 2s infinite;">${winnerData.reason}</div>
+            `;
+            scoresDiv.style.background = 'rgba(0,0,0,0.4)';
+            scoresDiv.style.border = '1.5px solid rgba(255,215,0,0.3)';
+            scoresDiv.style.boxShadow = '0 10px 30px rgba(0,0,0,0.5)';
+            scoresDiv.style.textAlign = 'center';
+            scoresDiv.style.padding = '15px';
+            scoresDiv.style.transform = 'scale(0)';
+            scoresDiv.style.animation = 'bounceIn 0.5s cubic-bezier(0.34,1.56,0.64,1) forwards';
+            scoresDiv.style.animationDelay = `${winnerData.cards.length * 0.1 + 0.2}s`;
+        }
         
         const rematchBtn = document.getElementById('btn-rematch');
         rematchBtn.textContent = '🔄 Nouvelle Partie';
@@ -438,6 +407,7 @@ class GameEngine {
         this.turnTimer = null;
         this.inactivitySeconds = 45;
         this.botLivenessTimer = null;
+        this.myTurnToastShown = false;
         
         this.initPWA();
         this.initParticles();
@@ -481,19 +451,24 @@ class GameEngine {
         this.myName = name;
         this.roomCode = this.generateRoomCode();
         this.isHost = true;
-        this.peer = new Peer("JT-" + this.roomCode);
-        
-        this.peer.on('connection', (conn) => {
-            this.conns.push(conn);
-            conn.on('data', (data) => this.handleClientData(conn, data));
-            conn.on('close', () => {
-                this.state.players = this.state.players.filter(p => p.id !== conn.peer);
-                this.conns = this.conns.filter(c => c !== conn);
-                this.broadcastState();
-                this.updateLobbyUI();
+        try {
+            this.peer = new Peer("JT-" + this.roomCode);
+            
+            this.peer.on('connection', (conn) => {
+                this.conns.push(conn);
+                conn.on('data', (data) => this.handleClientData(conn, data));
+                conn.on('close', () => {
+                    this.state.players = this.state.players.filter(p => p.id !== conn.peer);
+                    this.conns = this.conns.filter(c => c !== conn);
+                    this.broadcastState();
+                    this.updateLobbyUI();
+                });
             });
-        });
-        ui.showScreen('screen-host');
+            ui.showScreen('screen-host');
+        } catch(e) {
+            console.error("PeerJS error:", e);
+            alert("Erreur de connexion au serveur multijoueur. Vérifiez votre connexion.");
+        }
         document.getElementById('room-code-display').textContent = this.roomCode;
         this.state.players.push({ id: this.myId, name: this.myName, isBot: false, score: 0, cards: [], isHost: true });
         this.updateLobbyUI();
@@ -510,36 +485,44 @@ class GameEngine {
         
         this.myName = name;
         this.roomCode = code;
-        this.state.players.push({ id: this.myId, name, cards: [], isBot: false, isHost: false, winCount: 0 });
         
         const targetPeerId = "JT-" + code;
-        this.peer = new Peer();
-        this.peer.on('open', (id) => {
-            this.myId = id;
-            document.getElementById('join-msg').textContent = "Connexion...";
-            this.conn = this.peer.connect(targetPeerId);
-            
-            this.conn.on('open', () => {
-                this.conn.send({ type: 'JOIN', name: this.myName, id: this.myId });
+        try {
+            this.peer = new Peer();
+            this.peer.on('open', (id) => {
+                this.myId = id;
+                this.state.players.push({ id: this.myId, name, cards: [], isBot: false, isHost: false, winCount: 0 });
+                document.getElementById('join-msg').textContent = "Connexion...";
+                this.conn = this.peer.connect(targetPeerId);
+                
+                this.conn.on('open', () => {
+                    this.conn.send({ type: 'JOIN', name: this.myName, id: this.myId });
+                });
+                
+                this.conn.on('data', (data) => {
+                    if(data.type === 'STATE') {
+                        this.state = data.state;
+                        if(this.state.status === 'waiting') ui.showScreen('screen-host');
+                        else if(this.state.status === 'playing') ui.showScreen('screen-game');
+                        this.renderState();
+                    } else if(data.type === 'KICKED') {
+                        alert("Vous avez été exclu du salon.");
+                        this.quitGame();
+                    }
+                });
+                
+                this.conn.on('close', () => {
+                    alert("Hôte déconnecté");
+                    ui.showScreen('screen-home');
+                });
             });
-            
-            this.conn.on('data', (data) => {
-                if(data.type === 'STATE') {
-                    this.state = data.state;
-                    if(this.state.status === 'waiting') ui.showScreen('screen-host');
-                    else if(this.state.status === 'playing') ui.showScreen('screen-game');
-                    this.renderState();
-                } else if(data.type === 'KICKED') {
-                    alert("Vous avez été exclu du salon.");
-                    this.quitGame();
-                }
+            this.peer.on('error', (err) => {
+                document.getElementById('join-msg').textContent = "Salon introuvable !";
             });
-            
-            this.conn.on('close', () => {
-                alert("Hôte déconnecté");
-                ui.showScreen('screen-home');
-            });
-        });
+        } catch(e) {
+            console.error("PeerJS error:", e);
+            document.getElementById('join-msg').textContent = "Erreur de connexion multijoueur.";
+        }
     }
 
     startSolo() {
@@ -625,6 +608,15 @@ class GameEngine {
         if(this.isHost) {
             this.conns.forEach(c => c.send({ type: 'STATE', state: this.state }));
             this.renderState();
+            // Trigger bot actions for all bot-actionable states
+            // Use setTimeout(0) to let renderState fully complete before bot acts
+            const botActionStates = ['draw', 'place_or_reject', 'power_target'];
+            if(this.state.status === 'playing' && botActionStates.includes(this.state.activeAction)) {
+                const ap = this.state.players[this.state.turnIndex];
+                if(ap && ap.isBot) {
+                    setTimeout(() => this.playBotTurn(ap), 0);
+                }
+            }
         }
     }
 
@@ -651,7 +643,7 @@ class GameEngine {
         this.sendAction('execute_power', {guess: this.selectedParrotGuess, guessDeck: deckId});
         ui.hideModal('parrot-modal');
         this.selectedParrotGuess = null;
-        document.getElementById('parrot-placement-actions').style.display = 'flex';
+        document.getElementById('parrot-placement-actions').style.display = 'none';
     }
 
     // --- CORE GAME LOOP ---
@@ -713,6 +705,10 @@ class GameEngine {
                 // Determine order
                 rolls.sort((a, b) => b.roll - a.roll); // Highest first
                 this.state.turnOrder = rolls.map(r => r.id);
+                
+                // Sort players array to match the turn order so turnIndex points to the correct player
+                this.state.players.sort((a, b) => this.state.turnOrder.indexOf(a.id) - this.state.turnOrder.indexOf(b.id));
+                
                 this.state.turnIndex = 0; // points to turnOrder[0]
                 
                 const starter = rolls[0];
@@ -731,22 +727,79 @@ class GameEngine {
     }
 
     setupDecks() {
+        // Build a balanced deck: exactly 8 copies of each animal (64 total)
         let deck = [];
-        for(let i=0; i<8; i++) {
+        for(let i = 0; i < 8; i++) {
             ANIMALS.forEach(a => deck.push({ id: a.id + '_' + i, animal: a.id }));
         }
-        // Shuffle
-        for (let i = deck.length - 1; i > 0; i--) {
-            const j = Math.floor(Math.random() * (i + 1));
-            [deck[i], deck[j]] = [deck[j], deck[i]];
-        }
-        this.state.deckLeft = deck.slice(0, 32);
-        this.state.deckRight = deck.slice(32, 64);
+
+        // True random Fisher-Yates using crypto.getRandomValues for unbiased shuffling
+        const cryptoShuffle = (arr) => {
+            const buf = new Uint32Array(arr.length);
+            crypto.getRandomValues(buf);
+            for (let i = arr.length - 1; i > 0; i--) {
+                const j = buf[i] % (i + 1);
+                [arr[i], arr[j]] = [arr[j], arr[i]];
+            }
+            return arr;
+        };
+
+        cryptoShuffle(deck);
+
+        // Anti-clustering: reduce long streaks (max 2 same animal in a row)
+        const deCluster = (arr) => {
+            const MAX_STREAK = 2;
+            for (let i = MAX_STREAK; i < arr.length; i++) {
+                if (arr[i].animal === arr[i-1].animal && arr[i].animal === arr[i-MAX_STREAK].animal) {
+                    // Find the next card that's different and swap
+                    let swapped = false;
+                    for (let j = i + 1; j < arr.length; j++) {
+                        if (arr[j].animal !== arr[i].animal) {
+                            [arr[i], arr[j]] = [arr[j], arr[i]];
+                            swapped = true;
+                            break;
+                        }
+                    }
+                    if (!swapped) break; // No swap possible, accept the streak
+                }
+            }
+            return arr;
+        };
+
+        deCluster(deck);
+
+        // Balanced split: ensure each half has ~4 of each animal (not always 32/32 exactly)
+        // Strategy: interleave then split to guarantee balance
+        const half1 = [], half2 = [];
+        const animalBuckets = {};
+        ANIMALS.forEach(a => { animalBuckets[a.id] = []; });
+        deck.forEach(c => animalBuckets[c.animal].push(c));
+
+        // Assign 4 cards of each animal to each half, then shuffle each half
+        ANIMALS.forEach(a => {
+            const cards = animalBuckets[a.id];
+            half1.push(...cards.slice(0, 4));
+            half2.push(...cards.slice(4, 8));
+        });
+
+        cryptoShuffle(half1);
+        cryptoShuffle(half2);
+        deCluster(half1);
+        deCluster(half2);
+
+        this.state.deckLeft = half1;
+        this.state.deckRight = half2;
         this.state.players.forEach(p => p.cards = []);
     }
 
+
     nextTurn(extraTurnForPlayerId = null) {
-        this.clearLocks();
+        if(this.state && this.state.status !== 'playing') return;
+        
+        this.clearLocks(); // clearLocks AVANT checkWinConditions pour éviter les memory leaks
+        this.checkWinConditions();
+        if(this.state.status !== 'playing') return;
+        
         let nextId = extraTurnForPlayerId;
         const currentP = this.state.players[this.state.turnIndex];
         
@@ -775,6 +828,7 @@ class GameEngine {
         this.crocodileTargeting = false;
         this.parrotGiveTargeting = false;
         this.monkeySelectedCards = [];
+        this.myTurnToastShown = false;
         if(this.botLivenessTimer) clearTimeout(this.botLivenessTimer);
     }
 
@@ -830,6 +884,7 @@ class GameEngine {
                     if(this.state.lastRejected && this.state.lastRejected.deck === otherDeckId) {
                         this.state.lastRejected = null;
                     }
+                    // Do NOT force faceUp on both decks - only the rejected card is face up (already set above)
                     
                     this.state.pendingPower = { card: forcedDrawn, fromDeck: otherDeckId, forced: true };
                     ui.logHistory(activePlayer.name, 'pioche obligatoirement dans la pile opposée', null);
@@ -838,6 +893,7 @@ class GameEngine {
                     this.nextTurn();
                 }
                 break;
+
 
             case 'place_card':
                 if(this.state.activeAction !== 'place_or_reject') return;
@@ -853,15 +909,14 @@ class GameEngine {
                 this.state.lastAnimation = { id: Math.random(), type: 'place', playerId: activePlayer.id, animal: c.animal };
 
                 this.resolveChameleonPair(activePlayer);
-                this.checkWinConditions();
-                if(this.state.status !== 'playing') return;
-
+                
                 const activePowers = ['crocodile', 'monkey', 'crab', 'parrot'];
-                // Only trigger power if it was drawn from the deck (not a stolen card)
-                if (activePowers.includes(c.animal) && !this.state.pendingPower.monkeySuccess) {
+                // Only trigger power if it was drawn from the deck (not a stolen card) and not a parrot success
+                if (activePowers.includes(c.animal) && !this.state.pendingPower.monkeySuccess && !this.state.pendingPower.parrotSuccess) {
                     this.state.activeAction = 'power_target';
+                    this.state.pendingPower = { card: c, fromDeck: this.state.pendingPower.fromDeck };
                     this.broadcastState();
-                } else if (c.animal === 'hermit_crab') {
+                } else if (c.animal === 'hermit_crab' && !this.state.pendingPower.parrotSuccess) {
                     const hasCrab = activePlayer.cards.some(card => card.animal === 'crab');
                     if(hasCrab) {
                         ui.toast("💖 Bernard l'Hermite — Vous rejouez !");
@@ -869,13 +924,15 @@ class GameEngine {
                         this.state.pendingPower.showLove = true;
                         this.broadcastState();
                         setTimeout(() => {
-                            this.state.pendingPower.showLove = false;
+                            if(this.state && this.state.pendingPower) this.state.pendingPower.showLove = false;
                             this.nextTurn(activePlayer.id);
                         }, 2000);
                     } else {
+                        this.state.pendingPower = null;
                         this.nextTurn();
                     }
                 } else {
+                    this.state.pendingPower = null;
                     this.nextTurn();
                 }
                 break;
@@ -924,7 +981,12 @@ class GameEngine {
 
         switch(animal) {
             case 'crocodile':
-                if(!payload.targetPlayerId) {
+                if(!payload || !payload.targetPlayerId) {
+                    if (player && player.isBot) {
+                        console.warn("Bot Crocodile target missing, skipping turn");
+                        this.nextTurn();
+                        return;
+                    }
                     this.state.activeAction = 'power_target';
                     this.broadcastState();
                     return; // Wait for target
@@ -951,7 +1013,7 @@ class GameEngine {
                             this.state.lastAnimation = {
                                 id: Date.now(),
                                 type: 'crocodile_attack',
-                                playerId: player.id,
+                                attackerId: player.id,
                                 targetId: p2.id,
                                 targetCardAnimal: c2.animal
                             };
@@ -975,7 +1037,12 @@ class GameEngine {
                 break;
 
             case 'monkey':
-                if(!payload.targetPlayerId) {
+                if(!payload || !payload.targetPlayerId) {
+                    if (player && player.isBot) {
+                        console.warn("Bot Monkey target missing, skipping turn");
+                        this.nextTurn();
+                        return;
+                    }
                     this.state.activeAction = 'power_target';
                     this.broadcastState();
                     return; // Wait for target
@@ -983,18 +1050,20 @@ class GameEngine {
                 const p2M = this.state.players.find(p => p.id === payload.targetPlayerId);
                 if(p2M) {
                     try {
-                        let myMonkeyIdx = player.cards.findIndex(c => c.id === this.state.pendingPower.card.id);
+                        let myMonkeyIdx = player.cards.findIndex(c => c && c.id === this.state.pendingPower.card.id);
                         if (myMonkeyIdx === -1) {
-                            myMonkeyIdx = player.cards.findIndex(c => c.animal === 'monkey');
+                            myMonkeyIdx = player.cards.findIndex(c => c && c.animal === 'monkey');
                         }
                         if (myMonkeyIdx === -1) { this.nextTurn(); return; }
                         
                         const monkeyCard = player.cards.splice(myMonkeyIdx, 1)[0];
-                        let targetIdx = p2M.cards.findIndex(c => c.id === payload.cardId);
+                        let targetIdx = p2M.cards.findIndex(c => c && c.id === payload.cardId);
                         if (targetIdx === -1 && p2M.cards.length > 0) targetIdx = 0;
                         if (targetIdx === -1) { player.cards.push(monkeyCard); this.nextTurn(); return; }
                         
                         const stolenCard = p2M.cards[targetIdx];
+                        if (!stolenCard) { player.cards.push(monkeyCard); this.nextTurn(); return; }
+                        
                         p2M.cards[targetIdx] = monkeyCard;
                         
                         this.state.lastAnimation = {
@@ -1023,7 +1092,12 @@ class GameEngine {
                 break;
 
             case 'crab':
-                if(!payload.targetRowPlayerId) {
+                if(!payload || !payload.targetRowPlayerId) {
+                    if (player && player.isBot) {
+                        console.warn("Bot Crab target missing, skipping turn");
+                        this.nextTurn();
+                        return;
+                    }
                     this.state.activeAction = 'power_target';
                     this.broadcastState();
                     return;
@@ -1036,12 +1110,12 @@ class GameEngine {
                     ui.logHistory(player.name, 'a glissé une carte', 'crab');
                     this.resolveChameleonPair(cp);
                     if (player.id !== this.myId) {
-                        ui.toast(`🦀 ${player.name} glisse une carte et rejoue !`);
+                        ui.toast(`🦀 ${player.name} a glissé une carte.`);
                     } else {
-                        ui.toast("🦀 Pouvoir Crabe — Glissez une carte et REJOUEZ !");
+                        ui.toast("🦀 Pouvoir Crabe — Carte décalée !");
                     }
                 }
-                this.nextTurn(player.id);
+                this.nextTurn();
                 break;
                 
             case 'hermit_crab':
@@ -1073,7 +1147,7 @@ class GameEngine {
                 const deckId = payload.guessDeck || 1;
                 const arr = deckId === 1 ? this.state.deckLeft : this.state.deckRight;
                 if(arr.length === 0) { this.nextTurn(); return; }
-                const nextC = arr.pop();
+                const nextC = arr.shift();
                 const realName = animalNames[nextC.animal] || nextC.animal;
                 
                 if(nextC.animal === payload.guess) {
@@ -1091,9 +1165,19 @@ class GameEngine {
                         ? `Raté ! C'était un(e) ${realName}. La carte reste sur la pioche.`
                         : `🦜 ${player.name} s'est trompé ! C'était un(e) ${realName}.`);
                     
+                    nextC.faceUp = true;
                     arr.unshift(nextC);
                     this.state.lastRejected = { animal: nextC.animal, deck: deckId };
-                    this.nextTurn();
+                    
+                    // Broadcast FIRST so everyone sees the card face-up on the deck
+                    // Then wait before going to next turn so it's clearly visible
+                    this.state.activeAction = 'animating';
+                    this.broadcastState();
+                    setTimeout(() => {
+                        if(this.state && this.state.status === 'playing') {
+                            this.nextTurn();
+                        }
+                    }, 1500);
                 }
                 break;
                 
@@ -1187,8 +1271,8 @@ class GameEngine {
         
         const updateDOM = () => {
             // Setup decks visually
-            const d1 = document.getElementById('deck-1');
-            const d2 = document.getElementById('deck-2');
+            const d1 = document.getElementById('deck-left');
+            const d2 = document.getElementById('deck-right');
             if(d1) {
                 const pCount = document.getElementById('deck-left-count');
                 if(pCount) pCount.textContent = this.state.deckLeft ? this.state.deckLeft.length : 0;
@@ -1221,6 +1305,9 @@ class GameEngine {
             const myData = this.state.players.find(p => p.id === this.myId);
             if(!myData) return; // Spectator or not yet joined fully
             
+            const activePlayer = this.state.players[this.state.turnIndex];
+            const isMyTurn = activePlayer && activePlayer.id === this.myId;
+            
             document.getElementById('my-score').textContent = myData.score;
             this.renderRow('my-row', myData.cards, true);
             
@@ -1233,12 +1320,15 @@ class GameEngine {
                 let cardsHtml = '';
                 p.cards.forEach(c => {
                     let cl = "card";
-                    if(this.state.activeAction === 'power_target') {
+                    if(isMyTurn && this.state.activeAction === 'power_target') {
                         const pending = this.state.pendingPower.card.animal;
                         if(pending === 'crocodile' || pending === 'monkey' || pending === 'crab') cl += ' targetable';
                     }
                     if(this.state.status === 'ended' && this.state.winner && this.state.winner.id === p.id) {
                         cl += ' winning-card';
+                    }
+                    if (this.crabTargetCard && this.crabTargetCard.id === c.id) {
+                        cl += ' crab-selected';
                     }
                     cardsHtml += `<img src="assets/card_${c.animal}.jpg" class="${cl}" data-cardid="${c.id}" style="view-transition-name: card-${c.id};" onclick="game.handleCardClick('${p.id}', '${c.id}')">`;
                 });
@@ -1269,6 +1359,8 @@ class GameEngine {
                     }
                 } else if(this.state.lastAnimation.type === 'monkey_attack') {
                     ui.animateMonkeyAttack(this.state.lastAnimation);
+                } else if(this.state.lastAnimation.type === 'crocodile_attack') {
+                    ui.animateCrocodileAttack(this.state.lastAnimation);
                 }
             }
 
@@ -1279,8 +1371,6 @@ class GameEngine {
                 ui.hideModal('round-end-modal');
             }
 
-            const activePlayer = this.state.players[this.state.turnIndex];
-            const isMyTurn = activePlayer && activePlayer.id === this.myId;
             const localArea = document.getElementById('local-player-area');
             
             if (activePlayer) {
@@ -1292,7 +1382,10 @@ class GameEngine {
                     document.getElementById('inactivity-timer-badge').style.display = 'block';
                     this.startTimer();
                     this.startAfkTimer();
-                    ui.toast("À vous de jouer ✨");
+                    if(!this.myTurnToastShown) {
+                        ui.toast("À vous de jouer ✨");
+                        this.myTurnToastShown = true;
+                    }
                 } else {
                     turnInd.textContent = `Tour de : ${activePlayer.name}`;
                     turnInd.classList.add('opp-turn');
@@ -1300,9 +1393,7 @@ class GameEngine {
                     document.getElementById('inactivity-timer-badge').style.display = 'none';
                     this.stopTimer();
                     this.stopAfkTimer();
-                    if(activePlayer.isBot && this.isHost) {
-                        this.playBotTurn(activePlayer);
-                    }
+                    // Bot triggering is handled exclusively in broadcastState() to avoid race conditions
                 }
             }
 
@@ -1362,19 +1453,17 @@ class GameEngine {
                         titleHtml = `<div style="color:var(--gold); font-weight:bold; text-align:center; font-size:1.2rem; margin-bottom:10px;">Vol réussi ! 🐒<br>Où placer la carte volée ?</div>`;
                     }
                     
-                    const isForced = this.state.pendingPower.forced;
-                    const rejectBtnHtml = isForced ? '' : `<button class="btn btn-action btn-reject" style="width:100%; border-radius:16px; padding:12px;" onclick="game.sendAction('reject')">❌ Jeter la carte</button>`;
+                    const isForced = this.state.pendingPower.forced
+                                  || this.state.pendingPower.monkeySuccess
+                                  || this.state.pendingPower.parrotSuccess;
+                    const rejectBtnHtml = isForced ? '' : `<button class="btn-action-reject" style="width:100%; border-radius:16px; padding:12px;" onclick="game.sendAction('reject')">❌ Jeter la carte</button>`;
                     
                     pActions.innerHTML = `
                         <div style="display:flex; flex-direction:column; gap:8px; width:100%;">
                             ${titleHtml}
                             <div style="display:flex; gap:8px;">
-                                <button class="btn btn-action btn-main" style="flex:1; padding:10px 5px; border-radius:16px; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:4px;" onclick="game.sendAction('place_card', {side:'left'})">
-                                    <div style="font-size:1.1rem; font-weight:900;">⬅ Placer à Gauche</div>
-                                </button>
-                                <button class="btn btn-action btn-main" style="flex:1; padding:10px 5px; border-radius:16px; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:4px;" onclick="game.sendAction('place_card', {side:'right'})">
-                                    <div style="font-size:1.1rem; font-weight:900;">Placer à Droite ➡</div>
-                                </button>
+                                <button class="btn-action-place" style="flex:1; padding:12px 5px; border-radius:16px;" onclick="game.sendAction('place_card', {side:'left'})">⬅ Gauche</button>
+                                <button class="btn-action-place" style="flex:1; padding:12px 5px; border-radius:16px;" onclick="game.sendAction('place_card', {side:'right'})">Droite ➡</button>
                             </div>
                             ${rejectBtnHtml}
                         </div>
@@ -1423,7 +1512,7 @@ class GameEngine {
                                     <button class="btn-action-place" onclick="game.localCrabMove('left')">⬅ GAUCHE</button>
                                     <button class="btn-action-place" onclick="game.localCrabMove('right')">DROITE ➡</button>
                                 </div>
-                                <button class="btn-primary" style="margin-top:15px; width:100%; background:var(--gold); color:black;" onclick="game.confirmCrabMove()">✅ Valider la position</button>
+                                <button class="btn-action-gold" style="margin-top:15px;" onclick="game.confirmCrabMove()">✅ Valider la position</button>
                                 <button class="btn-skip-power" style="margin-top:10px;" onclick="game.cancelCrabTarget()">Annuler la sélection</button>
                             `;
                         } else {
@@ -1633,10 +1722,14 @@ class GameEngine {
                     // Sort opponents by threat descending
                     opponents.sort((a, b) => getThreatScore(b) - getThreatScore(a));
                     const targetOpp = opponents[0];
-                    // Find a card to destroy: preferably part of a pair, or just a random one
+                    
                     const counts = {};
                     targetOpp.cards.forEach(c => { counts[c.animal] = (counts[c.animal] || 0) + 1; });
-                    let targetCard = targetOpp.cards.find(c => counts[c.animal] >= 2);
+                    
+                    // Priority: lion or chameleon (rarest/most valuable) > part of a pair > random
+                    const HIGH_VALUE = ['lion', 'chameleon'];
+                    let targetCard = targetOpp.cards.find(c => HIGH_VALUE.includes(c.animal));
+                    if (!targetCard) targetCard = targetOpp.cards.find(c => counts[c.animal] >= 2);
                     if (!targetCard) targetCard = targetOpp.cards[Math.floor(Math.random() * targetOpp.cards.length)];
                     
                     p = { targetPlayerId: targetOpp.id, cardId: targetCard.id };
@@ -1646,12 +1739,40 @@ class GameEngine {
             case 'monkey': {
                 const opponents = this.state.players.filter(pl => pl.id !== bot.id && pl.cards.length > 0);
                 if(opponents.length > 0) {
-                    const targetOpp = opponents[Math.floor(Math.random() * opponents.length)];
-                    const targetCard = targetOpp.cards[Math.floor(Math.random() * targetOpp.cards.length)];
-                    p = { targetPlayerId: targetOpp.id, cardId: targetCard.id };
+                    // Count bot's own cards to find what would complete a pair
+                    const botCounts = {};
+                    bot.cards.forEach(c => { botCounts[c.animal] = (botCounts[c.animal] || 0) + 1; });
+                    
+                    // Find best steal target across ALL opponents
+                    let bestTarget = null, bestScore = -1;
+                    const HIGH_VALUE = ['lion', 'chameleon'];
+                    
+                    opponents.forEach(opp => {
+                        opp.cards.forEach(card => {
+                            let score = 0;
+                            if (HIGH_VALUE.includes(card.animal)) score += 10; // High-value card
+                            if (botCounts[card.animal]) score += 5; // Completes a pair for bot
+                            if (score > bestScore) {
+                                bestScore = score;
+                                bestTarget = { opp, card };
+                            }
+                        });
+                    });
+                    
+                    // Fallback: random opponent, random card
+                    if (!bestTarget) {
+                        const targetOpp = opponents[Math.floor(Math.random() * opponents.length)];
+                        if (targetOpp && targetOpp.cards.length > 0) {
+                            const targetCard = targetOpp.cards[Math.floor(Math.random() * targetOpp.cards.length)];
+                            if (targetCard) p = { targetPlayerId: targetOpp.id, cardId: targetCard.id };
+                        }
+                    } else {
+                        p = { targetPlayerId: bestTarget.opp.id, cardId: bestTarget.card.id };
+                    }
                 }
                 break;
             }
+
             case 'crab':
                 if(bot.cards.length > 1) {
                     p = { targetRowPlayerId: bot.id, fromIndex: 0, toIndex: bot.cards.length - 1 };
@@ -1667,37 +1788,47 @@ class GameEngine {
         return p;
     }
 
-    playBotTurn(bot) {
+    playBotTurn(botRef) {
         if(this.botLivenessTimer) clearTimeout(this.botLivenessTimer);
         if(this.botFallbackTimer) clearTimeout(this.botFallbackTimer);
         const thinkTime = 800 + Math.random() * 800;
         
         const executeBotAction = () => {
             try {
-                if(this.state.players[this.state.turnIndex].id !== bot.id) return; // Prevents stale action
-                
+                // Always re-read the active player from current state — stale closure reference causes bugs
+                const bot = this.state.players[this.state.turnIndex];
+                if(!bot || !bot.isBot) return; // Not a bot turn anymore
+                if(botRef && bot.id !== botRef.id) return; // Wrong bot
+
                 if(this.state.activeAction === 'draw') {
-                const dId = Math.random() > 0.5 ? 1 : 2;
-                this.processAction(bot.id, 'draw', { deck: dId });
-            } 
-            else if(this.state.activeAction === 'place_or_reject') {
-                const isForced = this.state.pendingPower && this.state.pendingPower.forced;
-                const keep = isForced ? true : Math.random() > 0.15;
-                if(keep) {
-                    const side = Math.random() > 0.5 ? 'left' : 'right';
-                    this.processAction(bot.id, 'place_card', { side });
-                } else {
-                    this.processAction(bot.id, 'reject');
+                    const dId = Math.random() > 0.5 ? 1 : 2;
+                    this.processAction(bot.id, 'draw', { deck: dId });
+                } 
+                else if(this.state.activeAction === 'place_or_reject') {
+                    const isForced = this.state.pendingPower && this.state.pendingPower.forced;
+                    const keep = isForced ? true : Math.random() > 0.15;
+                    if(keep) {
+                        const side = Math.random() > 0.5 ? 'left' : 'right';
+                        this.processAction(bot.id, 'place_card', { side });
+                    } else {
+                        this.processAction(bot.id, 'reject');
+                    }
                 }
-            }
-            else if(this.state.activeAction === 'power_target') {
-                const c = this.state.pendingPower.card;
-                const payload = this.getBotPowerPayload(bot, c.animal);
-                this.processAction(bot.id, 'execute_power', payload);
-            }
+                else if(this.state.activeAction === 'power_target') {
+                    if(!this.state.pendingPower || !this.state.pendingPower.card) {
+                        console.warn('Bot power_target: pendingPower.card missing, skipping');
+                        this.processAction(bot.id, 'execute_power', { cancel: true });
+                        return;
+                    }
+                    const animal = this.state.pendingPower.card.animal;
+                    const payload = this.getBotPowerPayload(bot, animal);
+                    console.log(`[BOT ${bot.name}] Executing power: ${animal}`, payload);
+                    this.processAction(bot.id, 'execute_power', payload);
+                }
             } catch(e) {
-                console.error("Bot synchronous action failed:", e);
-                this.processAction(bot.id, 'execute_power', {cancel: true});
+                console.error("Bot action failed:", e);
+                const bot = this.state.players[this.state.turnIndex];
+                if(bot) this.processAction(bot.id, 'execute_power', {cancel: true});
             }
         };
 
@@ -1705,16 +1836,18 @@ class GameEngine {
         
         // Guard against stuck bots
         this.botFallbackTimer = setTimeout(() => {
-            if(this.state.status === 'playing' && this.state.players[this.state.turnIndex].id === bot.id) {
+            const bot = this.state.players[this.state.turnIndex];
+            if(this.state.status === 'playing' && bot && bot.isBot) {
                 try {
                     executeBotAction();
                 } catch(e) {
-                    console.error("Bot action failed, skipping turn", e);
-                    this.processAction(bot.id, 'execute_power', {cancel: true});
+                    console.error("Bot fallback failed, skipping turn", e);
+                    if(bot) this.processAction(bot.id, 'execute_power', {cancel: true});
                 }
             }
         }, thinkTime + 3000);
     }
+
 
     // --- TIMERS ---
     startTimer() {
@@ -1818,10 +1951,5 @@ class GameEngine {
     }
 }
 
-// Init AudioContext on first interaction
-document.addEventListener('touchstart', () => soundEngine.initAudioContext(), {once:true});
-document.addEventListener('click', () => soundEngine.initAudioContext(), {once:true});
-
 // Init
 const game = new GameEngine();
-soundEngine.init();

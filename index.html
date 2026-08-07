@@ -25,24 +25,23 @@
     <div id="app-container">
         <!-- TOP RIGHT CONTROLS -->
         <div class="top-right-controls" style="display:none;" id="global-controls">
-            <button id="btn-sound-toggle" class="btn-sound-toggle" onclick="soundEngine.toggleMute()">🔊</button>
             <button id="btn-quit-game" class="btn-quit-discrete" onclick="ui.showQuitConfirmModal()">✕</button>
         </div>
 
         <!-- HOME SCREEN -->
         <div id="screen-home" class="screen active">
             <div class="logo-container bounce-in">
-                <img src="assets/logo.svg" alt="Jungle Touze" class="home-logo-img">
+                <img src="assets/logo_neon.png" alt="Jungle Touze" class="home-logo-img">
             </div>
-            <p class="subtitle">Le jeu de cartes de la jungle !</p>
+            <p class="subtitle">Le jeu du <span class="flame-word">dompteur</span> de la Jungle</p>
             <div class="menu-actions fade-in-up">
                 <input type="text" id="input-username" placeholder="Votre prénom..." maxlength="10" autocomplete="off">
-                <button class="btn btn-main" onclick="game.hostRoom()">🏠 Créer un Salon</button>
-                <button class="btn btn-secondary" onclick="ui.showScreen('screen-join')">🔗 Rejoindre</button>
-                <button id="btn-install-app" class="btn" style="display:none; background:linear-gradient(135deg,#1e90ff,#3742fa);" onclick="ui.installPWA()">📲 Installer l'application</button>
-                <button class="btn btn-secondary" onclick="ui.showHelpModal()" style="background:rgba(255,255,255,0.1);">📖 Règles du Jeu</button>
+                <button class="btn btn-main" onclick="game.hostRoom()">Créer un Salon</button>
+                <button class="btn btn-solo" onclick="game.startSolo()">Jouer en Solo</button>
+                <button class="btn btn-secondary" onclick="ui.showScreen('screen-join')">Rejoindre</button>
+                <button id="btn-install-app" class="btn" style="display:none; background:linear-gradient(135deg,#1e90ff,#3742fa);" onclick="ui.installPWA()">Installer l'application</button>
+                <button class="btn btn-rules" onclick="ui.showHelpModal()">Règles du Jeu <span class="version-pill">v2.0</span></button>
             </div>
-            <div class="version-badge">v7.0 • Jungle Touze</div>
         </div>
 
         <!-- HOST ROOM SCREEN -->
@@ -103,7 +102,7 @@
 
                 <!-- In-Board Modal -->
                 <div id="action-modal" style="display:none; flex-direction:column; gap:10px; position:absolute; inset:0; width:100%; height:100%; z-index:100; background:rgba(0,0,0,0.85); backdrop-filter:blur(8px); justify-content:center; align-items:center; padding:10px; border-radius:15px;">
-                    <div id="drawn-card" class="card shadow-pop" style="width:auto;height:clamp(120px, 28vh, 220px);aspect-ratio:2/3;border-radius:16px;overflow:hidden;border:3px solid white;box-shadow:0 10px 30px rgba(0,0,0,0.6);background:white;">
+                    <div id="drawn-card" class="card shadow-pop" style="width:auto;height:clamp(120px, min(28vh, 45vw), 220px);aspect-ratio:2/3;border-radius:16px;overflow:hidden;border:3px solid white;box-shadow:0 10px 30px rgba(0,0,0,0.6);background:white;">
                         <img id="drawn-card-img" src="" alt="Carte" style="width:100%;height:100%;object-fit:contain;display:block;">
                     </div>
                     <div id="card-actions" style="display:flex;flex-direction:column;gap:8px;width:100%;max-width:320px;background:rgba(15,15,26,0.9);padding:10px 15px;border-radius:20px;border:1px solid rgba(255,255,255,0.12);backdrop-filter:blur(15px);"></div>

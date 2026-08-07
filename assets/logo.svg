@@ -1,61 +1,45 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 -50 600 350" width="100%" height="100%">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 520 220" width="520" height="220">
   <defs>
-    <style>
-      @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@900&amp;display=swap');
-      .text-neon {
-        font-family: 'Outfit', sans-serif;
-        font-weight: 900;
-        text-anchor: middle;
-        fill: #fff;
-      }
-      .text-jungle {
-        font-size: 80px;
-        stroke: #00e5ff;
-        stroke-width: 4px;
-        filter: drop-shadow(0 0 15px #00e5ff) drop-shadow(0 0 30px #00e5ff);
-      }
-      .text-touze {
-        font-size: 80px;
-        stroke: #ff3366;
-        stroke-width: 4px;
-        filter: drop-shadow(0 0 15px #ff3366) drop-shadow(0 0 30px #ff3366);
-      }
-      .neon-tube {
-        fill: none;
-        stroke: #00e5ff;
-        stroke-linecap: round;
-        stroke-linejoin: round;
-        stroke-width: 1.5px;
-        filter: drop-shadow(0 0 4px #00e5ff) drop-shadow(0 0 10px #00e5ff);
-      }
-    </style>
-    <linearGradient id="sunsetGrad" x1="0" y1="0" x2="0" y2="1">
-      <stop offset="0%" stop-color="#ffcc00" />
-      <stop offset="50%" stop-color="#ff3366" />
-      <stop offset="100%" stop-color="#cc00ff" />
-    </linearGradient>
-    <g id="synth-sunset">
-      <circle cx="100" cy="100" r="100" fill="url(#sunsetGrad)" filter="drop-shadow(0 0 15px #ff3366)" />
-      <line x1="0" y1="120" x2="200" y2="120" stroke="#0F0F1A" stroke-width="4" />
-      <line x1="0" y1="140" x2="200" y2="140" stroke="#0F0F1A" stroke-width="6" />
-      <line x1="0" y1="165" x2="200" y2="165" stroke="#0F0F1A" stroke-width="8" />
-      <line x1="0" y1="195" x2="200" y2="195" stroke="#0F0F1A" stroke-width="12" />
-    </g>
-    <g id="neon-palm">
-      <path d="M13 8c0-2.76-2.46-5-5.5-5S2 5.24 2 8h2l1-1 1 1h4" />
-      <path d="M13 7.14A5.82 5.82 0 0 1 16.5 6c3.04 0 5.5 2.24 5.5 5h-3l-1-1-1 1h-3" />
-      <path d="M5.89 9.71c-2.15 2.15-2.3 5.47-.35 7.43l4.24-4.25.7-.7.71-.71 2.12-2.12c-1.95-1.96-5.27-1.8-7.42.35" />
-      <path d="M11 15.5c.5 2.5-.17 4.5-1 6.5h4c2-5.5-.5-12-1-14" />
-    </g>
+    <filter id="neon-cyan" x="-30%" y="-30%" width="160%" height="160%">
+      <feGaussianBlur in="SourceGraphic" stdDeviation="4" result="blur1"/>
+      <feGaussianBlur in="SourceGraphic" stdDeviation="12" result="blur2"/>
+      <feGaussianBlur in="SourceGraphic" stdDeviation="22" result="blur3"/>
+      <feMerge><feMergeNode in="blur3"/><feMergeNode in="blur2"/><feMergeNode in="blur1"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+    <filter id="neon-pink" x="-30%" y="-30%" width="160%" height="160%">
+      <feGaussianBlur in="SourceGraphic" stdDeviation="4" result="blur1"/>
+      <feGaussianBlur in="SourceGraphic" stdDeviation="12" result="blur2"/>
+      <feGaussianBlur in="SourceGraphic" stdDeviation="20" result="blur3"/>
+      <feMerge><feMergeNode in="blur3"/><feMergeNode in="blur2"/><feMergeNode in="blur1"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+    <filter id="neon-green" x="-50%" y="-50%" width="200%" height="200%">
+      <feGaussianBlur in="SourceGraphic" stdDeviation="3" result="blur1"/>
+      <feGaussianBlur in="SourceGraphic" stdDeviation="8" result="blur2"/>
+      <feMerge><feMergeNode in="blur2"/><feMergeNode in="blur1"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
   </defs>
-  
-  <g transform="translate(200, -30)" opacity="0.7">
-    <use href="#synth-sunset" />
-  </g>
-  <g transform="translate(252, 0) scale(4)" opacity="0.9">
-    <use href="#neon-palm" class="neon-tube" />
-  </g>
-  
-  <text x="300" y="140" class="text-neon text-jungle">JUNGLE</text>
-  <text x="300" y="240" class="text-neon text-touze">TOUZE</text>
+
+  <!-- JUNGLE glow layer -->
+  <text x="260" y="88" text-anchor="middle" font-family="Arial Black, Impact, sans-serif" font-size="88" font-weight="900" letter-spacing="4" fill="none" stroke="#00E5FF" stroke-width="6" opacity="0.22" filter="url(#neon-cyan)">JUNGLE</text>
+  <!-- JUNGLE main -->
+  <text x="260" y="88" text-anchor="middle" font-family="Arial Black, Impact, sans-serif" font-size="88" font-weight="900" letter-spacing="4" fill="none" stroke="#00E5FF" stroke-width="3" opacity="0.88" filter="url(#neon-cyan)">JUNGLE</text>
+  <!-- JUNGLE hot core -->
+  <text x="260" y="88" text-anchor="middle" font-family="Arial Black, Impact, sans-serif" font-size="88" font-weight="900" letter-spacing="4" fill="none" stroke="rgba(200,255,255,0.9)" stroke-width="1.2">JUNGLE</text>
+
+  <!-- Leaf motif neon green -->
+  <path d="M 242 118 C 248 98 260 90 260 90 C 260 90 272 98 278 118 C 269 107 260 103 251 107 Z" fill="none" stroke="#39FF14" stroke-width="2.5" filter="url(#neon-green)" opacity="0.95"/>
+  <line x1="260" y1="90" x2="260" y2="118" stroke="#39FF14" stroke-width="1.5" opacity="0.8" filter="url(#neon-green)"/>
+  <line x1="260" y1="97" x2="253" y2="109" stroke="#39FF14" stroke-width="1" opacity="0.6"/>
+  <line x1="260" y1="97" x2="267" y2="109" stroke="#39FF14" stroke-width="1" opacity="0.6"/>
+  <line x1="125" y1="108" x2="234" y2="108" stroke="#39FF14" stroke-width="1.5" opacity="0.45" filter="url(#neon-green)"/>
+  <line x1="286" y1="108" x2="395" y2="108" stroke="#39FF14" stroke-width="1.5" opacity="0.45" filter="url(#neon-green)"/>
+  <circle cx="122" cy="108" r="2.5" fill="#39FF14" opacity="0.7" filter="url(#neon-green)"/>
+  <circle cx="398" cy="108" r="2.5" fill="#39FF14" opacity="0.7" filter="url(#neon-green)"/>
+
+  <!-- TOUZE glow -->
+  <text x="260" y="188" text-anchor="middle" font-family="Arial Black, Impact, sans-serif" font-size="72" font-weight="900" letter-spacing="8" fill="none" stroke="#FF3366" stroke-width="5" opacity="0.22" filter="url(#neon-pink)">TOUZE</text>
+  <!-- TOUZE main -->
+  <text x="260" y="188" text-anchor="middle" font-family="Arial Black, Impact, sans-serif" font-size="72" font-weight="900" letter-spacing="8" fill="none" stroke="#FF3366" stroke-width="2.8" opacity="0.92" filter="url(#neon-pink)">TOUZE</text>
+  <!-- TOUZE hot core -->
+  <text x="260" y="188" text-anchor="middle" font-family="Arial Black, Impact, sans-serif" font-size="72" font-weight="900" letter-spacing="8" fill="none" stroke="rgba(255,190,210,0.85)" stroke-width="1">TOUZE</text>
 </svg>
