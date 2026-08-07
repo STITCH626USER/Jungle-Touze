@@ -1548,23 +1548,48 @@ class GameEngine {
     // --- BOT ENGINE ---
     getBotPowerPayload(bot, animal) {
         let p = { cancel: true };
+        
+        // Helper to score a player's threat level (closer to win = higher score)
+        const getThreatScore = (player) => {
+            const counts = {};
+            player.cards.forEach(c => { counts[c.animal] = (counts[c.animal] || 0) + 1; });
+            const unique = Object.keys(counts).length;
+            const pairs = Object.values(counts).filter(v => v >= 2).length;
+            return unique + (pairs * 2); 
+        };
+
         switch(animal) {
-            case 'crocodile':
-                const targets = this.state.players.filter(pl => pl.id !== bot.id && pl.cards.length > 0);
-                if(targets.length > 0) {
-                    const t = targets[Math.floor(Math.random()*targets.length)];
-                    const rc = t.cards[Math.floor(Math.random()*t.cards.length)];
-                    p = { targetPlayerId: t.id, cardId: rc.id };
+            case 'crocodile': {
+                const opponents = this.state.players.filter(pl => pl.id !== bot.id && pl.cards.length > 0);
+                if(opponents.length > 0) {
+                    // Sort opponents by threat descending
+                    opponents.sort((a, b) => getThreatScore(b) - getThreatScore(a));
+                    const targetOpp = opponents[0];
+                    // Find a card to destroy: preferably part of a pair, or just a random one
+                    const counts = {};
+                    targetOpp.cards.forEach(c => { counts[c.animal] = (counts[c.animal] || 0) + 1; });
+                    let targetCard = targetOpp.cards.find(c => counts[c.animal] >= 2);
+                    if (!targetCard) targetCard = targetOpp.cards[Math.floor(Math.random() * targetOpp.cards.length)];
+                    
+                    p = { targetPlayerId: targetOpp.id, cardId: targetCard.id };
                 }
                 break;
-            case 'monkey':
-                const targetsMonkey = this.state.players.filter(pl => pl.id !== bot.id && pl.cards.length > 0);
-                if(targetsMonkey.length > 0) {
-                    const t = targetsMonkey[Math.floor(Math.random()*targetsMonkey.length)];
-                    const rc = t.cards[Math.floor(Math.random()*t.cards.length)];
-                    p = { targetPlayerId: t.id, cardId: rc.id };
+            }
+            case 'monkey': {
+                const opponents = this.state.players.filter(pl => pl.id !== bot.id && pl.cards.length > 0);
+                if(opponents.length > 0) {
+                    opponents.sort((a, b) => getThreatScore(b) - getThreatScore(a));
+                    const targetOpp = opponents[0];
+                    
+                    // Find a card to steal: preferably one the bot doesn't have, or just random
+                    const botHas = new Set(bot.cards.map(c => c.animal));
+                    let targetCard = targetOpp.cards.find(c => !botHas.has(c.animal));
+                    if (!targetCard) targetCard = targetOpp.cards[Math.floor(Math.random() * targetOpp.cards.length)];
+
+                    p = { targetPlayerId: targetOpp.id, cardId: targetCard.id };
                 }
                 break;
+            }
             case 'crab':
                 if(bot.cards.length > 1) {
                     p = { targetRowPlayerId: bot.id, fromIndex: 0, toIndex: bot.cards.length - 1 };
