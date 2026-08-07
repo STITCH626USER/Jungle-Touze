@@ -1352,10 +1352,11 @@ class GameEngine {
                         if (c.animal === 'crab' && this.crabTargetCard) {
                             actionsHtml += `
                                 <div style="display:flex; gap:10px; margin-top:15px; width:100%;">
-                                    <button class="btn-action-place" onclick="game.confirmCrabMove('left')">⬅ GAUCHE</button>
-                                    <button class="btn-action-place" onclick="game.confirmCrabMove('right')">DROITE ➡</button>
+                                    <button class="btn-action-place" onclick="game.localCrabMove('left')">⬅ GAUCHE</button>
+                                    <button class="btn-action-place" onclick="game.localCrabMove('right')">DROITE ➡</button>
                                 </div>
-                                <button class="btn-skip-power" style="margin-top:15px;" onclick="game.cancelCrabTarget()">Annuler la sélection</button>
+                                <button class="btn-primary" style="margin-top:15px; width:100%; background:var(--gold); color:black;" onclick="game.confirmCrabMove()">✅ Valider la position</button>
+                                <button class="btn-skip-power" style="margin-top:10px;" onclick="game.cancelCrabTarget()">Annuler la sélection</button>
                             `;
                         } else {
                             actionsHtml += `<button class="btn-skip-power" onclick="game.sendAction('execute_power', {cancel: true})">Passer le pouvoir</button>`;
@@ -1429,8 +1430,8 @@ class GameEngine {
             if(!p) return;
             const idx = p.cards.findIndex(c => c.id === cardId);
             if(idx !== -1) {
-                this.crabTargetCard = { pId: playerId, idx: idx, cId: cardId };
-                ui.toast("🦀 Choisissez la direction");
+                this.crabTargetCard = { pId: playerId, originalIdx: idx, currentIdx: idx, cId: cardId };
+                ui.toast("🦀 Déplacez la carte, puis validez");
                 this.renderState();
             }
         } else {
@@ -1474,26 +1475,59 @@ class GameEngine {
     }
     
     cancelCrabTarget() {
+        if(!this.crabTargetCard) return;
+        const target = this.crabTargetCard;
+        const p = this.state.players.find(x => x.id === target.pId);
+        
+        if (p && target.originalIdx !== target.currentIdx) {
+            const moved = p.cards.splice(target.currentIdx, 1)[0];
+            p.cards.splice(target.originalIdx, 0, moved);
+        }
+        
         this.crabTargetCard = null;
         this.renderState();
     }
     
-    confirmCrabMove(dir) {
+    localCrabMove(dir) {
         if(!this.crabTargetCard) return;
         const target = this.crabTargetCard;
         const p = this.state.players.find(x => x.id === target.pId);
         if(!p) return;
         
-        let toIndex = target.idx;
+        let newIdx = target.currentIdx;
         if(dir === 'left') {
-            toIndex = Math.max(0, target.idx - 1);
+            newIdx = Math.max(0, target.currentIdx - 1);
         } else {
-            toIndex = Math.min(p.cards.length - 1, target.idx + 1);
+            newIdx = Math.min(p.cards.length - 1, target.currentIdx + 1);
+        }
+        
+        if(newIdx !== target.currentIdx) {
+            const moved = p.cards.splice(target.currentIdx, 1)[0];
+            p.cards.splice(newIdx, 0, moved);
+            target.currentIdx = newIdx;
+            this.renderState();
+        }
+    }
+    
+    confirmCrabMove() {
+        if(!this.crabTargetCard) return;
+        const target = this.crabTargetCard;
+        const p = this.state.players.find(x => x.id === target.pId);
+        
+        // Revert local changes so the server can apply them cleanly
+        if (p && target.originalIdx !== target.currentIdx) {
+            const moved = p.cards.splice(target.currentIdx, 1)[0];
+            p.cards.splice(target.originalIdx, 0, moved);
         }
         
         this.crabTargeting = false;
         this.crabTargetCard = null;
-        this.sendAction('execute_power', { targetRowPlayerId: p.id, fromIndex: target.idx, toIndex: toIndex });
+        
+        if(target.originalIdx === target.currentIdx) {
+            this.sendAction('execute_power', { cancel: true });
+        } else {
+            this.sendAction('execute_power', { targetRowPlayerId: target.pId, fromIndex: target.originalIdx, toIndex: target.currentIdx });
+        }
     }
 
     handleOpponentClick(playerId) {
