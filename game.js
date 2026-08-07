@@ -775,7 +775,11 @@ class GameEngine {
                         const tmp = p1.cards[idx1];
                         p1.cards[idx1] = p_2.cards[idx2];
                         p_2.cards[idx2] = tmp;
-                        ui.logHistory(player.name, 'a échangé 2 cartes', 'monkey');
+                        
+                        const name1 = animalNames[tmp.animal] || tmp.animal;
+                        const name2 = animalNames[p_2.cards[idx2].animal] || p_2.cards[idx2].animal;
+                        ui.logHistory(player.name, `a échangé le ${name1} de ${p1.name} avec le ${name2} de ${p_2.name}`, 'monkey');
+                        
                         if (player.id !== this.myId) {
                             ui.toast(`🐒 ${player.name} a échangé des cartes !`);
                         }

@@ -228,9 +228,15 @@ input[type="text"]:focus { outline: none; border-color: var(--secondary); box-sh
 .fly-to-opponent { animation: flyToOpponent 0.6s ease-in forwards !important; pointer-events: none; }
 
 /* Nouveau Ciblage & Animations */
-.targetable { border-color: var(--primary) !important; animation: pulseTarget 1.5s infinite; cursor: crosshair; transition: transform 0.3s ease; }
-.targetable:hover { transform: scale(1.05); }
-@keyframes pulseTarget { 0% { transform: scale(1); box-shadow: 0 0 0 0 rgba(255,51,102,0.7); } 70% { transform: scale(1.03); box-shadow: 0 0 0 10px rgba(255,51,102,0); } 100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(255,51,102,0); } }
+.targetable { border-color: var(--primary) !important; animation: quiverTarget 0.5s infinite ease-in-out; cursor: crosshair; z-index: 50; position: relative; }
+.targetable:hover { transform: scale(1.2) !important; }
+@keyframes quiverTarget {
+  0% { transform: scale(1.1) rotate(0deg); box-shadow: 0 0 15px 3px rgba(255,51,102,0.8); }
+  25% { transform: scale(1.1) rotate(3deg); box-shadow: 0 0 25px 6px rgba(255,51,102,1); }
+  50% { transform: scale(1.1) rotate(0deg); box-shadow: 0 0 15px 3px rgba(255,51,102,0.8); }
+  75% { transform: scale(1.1) rotate(-3deg); box-shadow: 0 0 25px 6px rgba(255,51,102,1); }
+  100% { transform: scale(1.1) rotate(0deg); box-shadow: 0 0 15px 3px rgba(255,51,102,0.8); }
+}
 
 @keyframes bounceIn { 0% { transform: scale(0); } 50% { transform: scale(1.2); } 100% { transform: scale(1); } }
 @keyframes heartPulse { from { transform: scale(1); } to { transform: scale(1.3); } }
