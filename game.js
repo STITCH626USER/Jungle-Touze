@@ -931,37 +931,45 @@ class GameEngine {
                 }
                 const p2 = this.state.players.find(p => p.id === payload.targetPlayerId);
                 if(p2) {
-                    // Find and remove the crocodile from the attacker's hand
-                    let myCrocoIdx = player.cards.findIndex(c => c.id === this.state.pendingPower.card.id);
-                    if (myCrocoIdx === -1) myCrocoIdx = player.cards.findIndex(c => c.animal === 'crocodile');
-                    
-                    let crocodileCard = null;
-                    if (myCrocoIdx !== -1) {
-                        crocodileCard = player.cards.splice(myCrocoIdx, 1)[0];
-                    }
-                    
-                    const c2 = p2.cards.find(c => c.id === payload.cardId);
-                    p2.cards = p2.cards.filter(c => c.id !== payload.cardId);
-                    ui.logHistory(player.name, `a éliminé le ${c2.animal} de ${p2.name}`, 'crocodile');
-                    
-                    // Les 2 cartes vont sous la pioche
-                    if (c2 && this.state.deckLeft) this.state.deckLeft.push(c2);
-                    if (crocodileCard && this.state.deckRight) this.state.deckRight.push(crocodileCard);
-                    
-                    this.state.lastAnimation = {
-                        id: Date.now(),
-                        type: 'crocodile_attack',
-                        playerId: player.id,
-                        targetId: p2.id,
-                        targetCardAnimal: c2.animal
-                    };
+                    try {
+                        let myCrocoIdx = player.cards.findIndex(c => c.id === this.state.pendingPower.card.id);
+                        if (myCrocoIdx === -1) myCrocoIdx = player.cards.findIndex(c => c.animal === 'crocodile');
+                        
+                        let crocodileCard = null;
+                        if (myCrocoIdx !== -1) {
+                            crocodileCard = player.cards.splice(myCrocoIdx, 1)[0];
+                        }
+                        
+                        const c2 = p2.cards.find(c => c.id === payload.cardId);
+                        p2.cards = p2.cards.filter(c => c.id !== payload.cardId);
+                        
+                        if (c2) {
+                            ui.logHistory(player.name, `a éliminé le ${c2.animal} de ${p2.name}`, 'crocodile');
+                            
+                            if (this.state.deckLeft) this.state.deckLeft.push(c2);
+                            
+                            this.state.lastAnimation = {
+                                id: Date.now(),
+                                type: 'crocodile_attack',
+                                playerId: player.id,
+                                targetId: p2.id,
+                                targetCardAnimal: c2.animal
+                            };
 
-                    if (player.id !== this.myId) {
-                        const animalNames = { lion: 'Lion', chameleon: 'Caméléon', octopus: 'Pieuvre', crocodile: 'Crocodile', monkey: 'Singe', crab: 'Crabe', parrot: 'Perroquet', hermit_crab: "Bernard l'Hermite" };
-                        const anName = animalNames[c2.animal] || c2.animal;
-                        ui.toast(`🐊 ${player.name} élimine le ${anName} de ${p2.name} !`);
+                            if (player.id !== this.myId) {
+                                const animalNames = { lion: 'Lion', chameleon: 'Caméléon', octopus: 'Pieuvre', crocodile: 'Crocodile', monkey: 'Singe', crab: 'Crabe', parrot: 'Perroquet', hermit_crab: "Bernard l'Hermite" };
+                                const anName = animalNames[c2.animal] || c2.animal;
+                                ui.toast(`🐊 ${player.name} élimine le ${anName} de ${p2.name} !`);
+                            }
+                        }
+                        
+                        if (crocodileCard && this.state.deckRight) this.state.deckRight.push(crocodileCard);
+                        
+                    } catch (e) {
+                        console.error("Crocodile power failed:", e);
                     }
-                    
+                    this.nextTurn();
+                } else {
                     this.nextTurn();
                 }
                 break;
@@ -974,34 +982,39 @@ class GameEngine {
                 }
                 const p2M = this.state.players.find(p => p.id === payload.targetPlayerId);
                 if(p2M) {
-                    let myMonkeyIdx = player.cards.findIndex(c => c.id === this.state.pendingPower.card.id);
-                    if (myMonkeyIdx === -1) {
-                        myMonkeyIdx = player.cards.findIndex(c => c.animal === 'monkey');
+                    try {
+                        let myMonkeyIdx = player.cards.findIndex(c => c.id === this.state.pendingPower.card.id);
+                        if (myMonkeyIdx === -1) {
+                            myMonkeyIdx = player.cards.findIndex(c => c.animal === 'monkey');
+                        }
+                        if (myMonkeyIdx === -1) { this.nextTurn(); return; }
+                        
+                        const monkeyCard = player.cards.splice(myMonkeyIdx, 1)[0];
+                        let targetIdx = p2M.cards.findIndex(c => c.id === payload.cardId);
+                        if (targetIdx === -1 && p2M.cards.length > 0) targetIdx = 0;
+                        if (targetIdx === -1) { player.cards.push(monkeyCard); this.nextTurn(); return; }
+                        
+                        const stolenCard = p2M.cards[targetIdx];
+                        p2M.cards[targetIdx] = monkeyCard;
+                        
+                        this.state.lastAnimation = {
+                            id: Date.now(),
+                            type: 'monkey_attack',
+                            attackerId: player.id,
+                            targetId: p2M.id,
+                            targetCardAnimal: stolenCard.animal,
+                            targetCardId: stolenCard.id
+                        };
+                        
+                        this.state.pendingPower = { card: stolenCard, monkeySuccess: true };
+                        this.state.activeAction = 'place_or_reject';
+                        
+                        ui.logHistory(player.name, `a échangé un singe contre le ${stolenCard.animal} de ${p2M.name}`, 'monkey');
+                    } catch(e) {
+                        console.error("Monkey power failed:", e);
+                        this.nextTurn();
+                        return;
                     }
-                    if (myMonkeyIdx === -1) { this.nextTurn(); return; }
-                    
-                    const monkeyCard = player.cards.splice(myMonkeyIdx, 1)[0];
-                    let targetIdx = p2M.cards.findIndex(c => c.id === payload.cardId);
-                    if (targetIdx === -1 && p2M.cards.length > 0) targetIdx = 0;
-                    if (targetIdx === -1) { player.cards.push(monkeyCard); this.nextTurn(); return; }
-                    
-                    const stolenCard = p2M.cards[targetIdx];
-                    p2M.cards[targetIdx] = monkeyCard;
-                    
-                    this.state.lastAnimation = {
-                        id: Date.now(),
-                        type: 'monkey_attack',
-                        attackerId: player.id,
-                        targetId: p2M.id,
-                        targetCardAnimal: stolenCard.animal,
-                        targetCardId: stolenCard.id
-                    };
-                    
-                    this.state.pendingPower = { card: stolenCard, monkeySuccess: true };
-                    this.state.activeAction = 'place_or_reject';
-                    
-                    ui.logHistory(player.name, `a volé le ${stolenCard.animal} de ${p2M.name} avec son Singe`, 'monkey');
-                    
                     this.resolveChameleonPair(p2M); 
                     this.broadcastState();
                 } else {
