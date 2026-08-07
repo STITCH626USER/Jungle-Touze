@@ -1089,14 +1089,22 @@ class GameEngine {
             drawnCardImg.style.viewTransitionName = '';
             
             if (activePlayer && !isMyTurn && this.state.status === 'playing') {
-                if (this.state.activeAction === 'place_or_reject' || this.state.activeAction === 'power_target') {
+                if (this.state.activeAction === 'place_or_reject') {
                     if(this.state.pendingPower && this.state.pendingPower.card) {
+                        document.getElementById('drawn-card').style.display = 'flex';
                         actModal.style.display = 'flex';
                         const c = this.state.pendingPower.card;
                         drawnCardImg.src = `assets/card_${c.animal}.jpg`;
                         drawnCardImg.style.viewTransitionName = `card-${c.id}`;
                         cActions.style.display = 'flex';
                         cActions.innerHTML = `<p style="color:var(--secondary);text-align:center;font-weight:900;margin:0;font-size:1.2rem;">${activePlayer.name} réfléchit...</p>`;
+                    }
+                } else if (this.state.activeAction === 'power_target') {
+                    document.getElementById('drawn-card').style.display = 'none';
+                    if(this.state.pendingPower && this.state.pendingPower.card) {
+                        actModal.style.display = 'flex';
+                        cActions.style.display = 'flex';
+                        cActions.innerHTML = `<p style="color:var(--secondary);text-align:center;font-weight:900;margin:0;font-size:1.2rem;">${activePlayer.name} cible son pouvoir...</p>`;
                     }
                 }
             }
@@ -1192,13 +1200,17 @@ class GameEngine {
             }
         };
 
-        if (document.startViewTransition) {
-            try {
-                document.startViewTransition(() => updateDOM());
-            } catch(e) {
+        if (!document.startViewTransition) {
+            updateDOM();
+            return;
+        }
+        
+        try {
+            document.startViewTransition(() => {
                 updateDOM();
-            }
-        } else {
+            });
+        } catch(e) {
+            console.error("View transition error:", e);
             updateDOM();
         }
     }
@@ -1388,9 +1400,14 @@ class GameEngine {
         // Guard against stuck bots
         setTimeout(() => {
             if(this.state.status === 'playing' && this.state.players[this.state.turnIndex].id === bot.id) {
-                executeBotAction();
+                try {
+                    executeBotAction();
+                } catch(e) {
+                    console.error("Bot action failed, skipping turn", e);
+                    this.processAction(bot.id, 'execute_power', {cancel: true});
+                }
             }
-        }, thinkTime + 5000);
+        }, thinkTime + 3000);
     }
 
     // --- TIMERS ---
