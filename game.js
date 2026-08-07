@@ -415,14 +415,14 @@ class GameEngine {
 
     getInitialState() {
         return {
-            status: 'waiting', // waiting, rolling, playing, ended
-            players: [], // { id, name, isBot, score, cards: [], isHost }
+            status: 'waiting',
+            players: [],
             deckLeft: [],
             deckRight: [],
             turnIndex: 0,
-            activeAction: null, // 'draw', 'keep_reject', 'place', 'power'
-            pendingPower: null, // holds info about power being executed
-            history: []
+            activeAction: null,
+            pendingPower: null,
+            history: []  // [{player, action, power}] — broadcasté à tous
         };
     }
 
@@ -606,10 +606,13 @@ class GameEngine {
 
     broadcastState() {
         if(this.isHost) {
+            // Trim history to last 30 entries before sending
+            if(this.state.history && this.state.history.length > 30) {
+                this.state.history = this.state.history.slice(0, 30);
+            }
             this.conns.forEach(c => c.send({ type: 'STATE', state: this.state }));
             this.renderState();
-            // Trigger bot actions for all bot-actionable states
-            // Use setTimeout(0) to let renderState fully complete before bot acts
+            // Trigger bot actions
             const botActionStates = ['draw', 'place_or_reject', 'power_target'];
             if(this.state.status === 'playing' && botActionStates.includes(this.state.activeAction)) {
                 const ap = this.state.players[this.state.turnIndex];
@@ -618,6 +621,15 @@ class GameEngine {
                 }
             }
         }
+    }
+
+    // Append to history array (broadcasté à tous via state)
+    addHistory(player, action, power) {
+        if(!this.state.history) this.state.history = [];
+        this.state.history.unshift({ player, action, power, ts: Date.now() });
+        if(this.state.history.length > 30) this.state.history.pop();
+        // Also update local DOM immediately for host
+        ui.logHistory(player, action, power);
     }
 
     sendAction(action, payload = {}) {
@@ -872,7 +884,7 @@ class GameEngine {
                     if(this.state.deckRight) this.state.deckRight.unshift(this.state.pendingPower.card);
                 }
                 
-                ui.logHistory(activePlayer.name, 'a jeté sa carte', null);
+                this.addHistory(activePlayer.name, 'a jeté sa carte', null);
                 
                 // Force draw from the OTHER deck
                 const otherDeckId = originalDeck === 1 ? 2 : 1;
@@ -887,7 +899,7 @@ class GameEngine {
                     // Do NOT force faceUp on both decks - only the rejected card is face up (already set above)
                     
                     this.state.pendingPower = { card: forcedDrawn, fromDeck: otherDeckId, forced: true };
-                    ui.logHistory(activePlayer.name, 'pioche obligatoirement dans la pile opposée', null);
+                    this.addHistory(activePlayer.name, 'pioche obligatoirement dans la pile opposée', null);
                     this.broadcastState();
                 } else {
                     this.nextTurn();
@@ -901,7 +913,7 @@ class GameEngine {
                 const c = this.state.pendingPower.card;
                 
                 soundEngine.play(c.animal);
-                ui.logHistory(activePlayer.name, `a placé une carte`, c.animal);
+                this.addHistory(activePlayer.name, `a placé une carte`, c.animal);
                 
                 if (side === 'left') activePlayer.cards.unshift(c);
                 else activePlayer.cards.push(c);
@@ -956,7 +968,7 @@ class GameEngine {
                 
             case 'execute_power':
                 if (payload.cancel) {
-                    ui.logHistory(activePlayer.name, 'a annulé son pouvoir', null);
+                    this.addHistory(activePlayer.name, 'a annulé son pouvoir', null);
                     this.nextTurn();
                     break;
                 }
@@ -1006,7 +1018,7 @@ class GameEngine {
                         p2.cards = p2.cards.filter(c => c.id !== payload.cardId);
                         
                         if (c2) {
-                            ui.logHistory(player.name, `a éliminé le ${c2.animal} de ${p2.name}`, 'crocodile');
+                            this.addHistory(player.name, `a éliminé le ${c2.animal} de ${p2.name}`, 'crocodile');
                             
                             if (this.state.deckLeft) this.state.deckLeft.push(c2);
                             
@@ -1078,7 +1090,7 @@ class GameEngine {
                         this.state.pendingPower = { card: stolenCard, monkeySuccess: true };
                         this.state.activeAction = 'place_or_reject';
                         
-                        ui.logHistory(player.name, `a échangé un singe contre le ${stolenCard.animal} de ${p2M.name}`, 'monkey');
+                        this.addHistory(player.name, `a échangé un singe contre le ${stolenCard.animal} de ${p2M.name}`, 'monkey');
                     } catch(e) {
                         console.error("Monkey power failed:", e);
                         this.nextTurn();
@@ -1107,7 +1119,7 @@ class GameEngine {
                 if(cp) {
                     const moved = cp.cards.splice(payload.fromIndex, 1)[0];
                     cp.cards.splice(payload.toIndex, 0, moved);
-                    ui.logHistory(player.name, 'a glissé une carte', 'crab');
+                    this.addHistory(player.name, 'a glisé une carte (Crabe)', 'crab');
                     this.resolveChameleonPair(cp);
                     if (player.id !== this.myId) {
                         ui.toast(`🦀 ${player.name} a glissé une carte.`);
@@ -1151,7 +1163,7 @@ class GameEngine {
                 const realName = animalNames[nextC.animal] || nextC.animal;
                 
                 if(nextC.animal === payload.guess) {
-                    ui.logHistory(player.name, `a deviné ${guessName} avec succès!`, 'parrot');
+                    this.addHistory(player.name, `a deviné ${guessName} avec succès!`, 'parrot');
                     ui.toast(player.id === this.myId 
                         ? `Bien joué ! Vous gagnez le ${guessName} et rejouez !`
                         : `🦜 ${player.name} avait parié ${guessName}... et gagne !`);
@@ -1160,7 +1172,7 @@ class GameEngine {
                     this.state.activeAction = 'place_or_reject';
                     this.broadcastState();
                 } else {
-                    ui.logHistory(player.name, `s'est trompé. A dit ${guessName} mais c'était ${realName}`, 'parrot');
+                    this.addHistory(player.name, `s'est trompé. A dit ${guessName} mais c'était ${realName}`, 'parrot');
                     ui.toast(player.id === this.myId
                         ? `Raté ! C'était un(e) ${realName}. La carte reste sur la pioche.`
                         : `🦜 ${player.name} s'est trompé ! C'était un(e) ${realName}.`);
@@ -1195,14 +1207,15 @@ class GameEngine {
             const uniques = new Set(player.cards.map(c => c.animal));
             if(uniques.size >= 8) winReason = "Lion (8 uniques)";
             
-            // 2. Octopus (3 pairs)
+            // 2. Octopus (3 paires) — REQUIERT une carte Pieuvre en main
+            const hasOctopus = player.cards.some(c => c.animal === 'octopus');
             const counts = {};
             player.cards.forEach(c => { counts[c.animal] = (counts[c.animal] || 0) + 1; });
             let pairs = 0;
             for(const a in counts) {
-                if(counts[a] >= 2 && a !== 'chameleon') pairs++; // chameleons destroy each other anyway
+                if(counts[a] >= 2 && a !== 'chameleon') pairs++;
             }
-            if(pairs >= 3) winReason = "Pieuvre (3 paires)";
+            if(hasOctopus && pairs >= 3) winReason = "Pieuvre (3 paires)";
             
             // 3. Standard (4 in a row, chameleon acts as wildcard)
             if(!winReason && player.cards.length >= 4) {
@@ -1233,7 +1246,7 @@ class GameEngine {
             }
         }
         if (chameleons.length >= 2) {
-            ui.logHistory(player.name, "a eu 2 Caméléons ! Ils s'autodétruisent.", null);
+            this.addHistory(player.name, "a eu 2 Caméléons ! Ils s'autodétruisent.", null);
             ui.toast("💥 2 Caméléons détruits !");
             soundEngine.play('chameleon');
             // Remove the last two chameleons
@@ -1270,6 +1283,17 @@ class GameEngine {
         if (!this.state || !this.state.players) return;
         
         const updateDOM = () => {
+            // Sync history from state (important for clients who don't run processAction)
+            if(this.state.history && this.state.history.length > 0 && !this.isHost) {
+                const h = document.getElementById('history-list');
+                if(h) {
+                    h.innerHTML = this.state.history.map(entry => {
+                        const icon = entry.power ? `<img src="assets/card_${entry.power}.jpg" class="history-mini-img">` : '';
+                        return `<div class="history-item"><strong>${entry.player}</strong> ${entry.action} ${icon}</div>`;
+                    }).join('');
+                }
+            }
+
             // Setup decks visually
             const d1 = document.getElementById('deck-left');
             const d2 = document.getElementById('deck-right');
