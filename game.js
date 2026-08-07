@@ -289,7 +289,19 @@ class GameEngine {
         return code;
     }
 
+    resetRoomState() {
+        if(this.peer) this.peer.destroy();
+        this.conns.forEach(c => c.close());
+        this.conns = [];
+        if(this.activeBots && this.activeBots.length > 0) {
+            this.bots.push(...this.activeBots);
+            this.activeBots = [];
+        }
+        this.state = this.getInitialState();
+    }
+
     async hostRoom() {
+        this.resetRoomState();
         const name = document.getElementById('input-username').value.trim() || 'Hôte';
         this.myName = name;
         this.roomCode = this.generateRoomCode();
@@ -313,6 +325,7 @@ class GameEngine {
     }
 
     joinRoom() {
+        this.resetRoomState();
         const code = document.getElementById('input-room-code').value.toUpperCase();
         const name = document.getElementById('input-player-name').value.trim();
         if(!code || !name) {
