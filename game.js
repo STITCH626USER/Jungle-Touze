@@ -1462,7 +1462,11 @@ class GameEngine {
         cont.innerHTML = '';
         cards.forEach((c, index) => {
             let cl = "card";
-            if(this.state.activeAction === 'power_target') {
+            
+            const activePlayer = this.state.players[this.state.turnIndex];
+            const isMyTurn = activePlayer && activePlayer.id === this.myId;
+            
+            if(this.state.activeAction === 'power_target' && isMyTurn) {
                 const pending = this.state.pendingPower.card.animal;
                 if(isMe && pending === 'crab') cl += ' targetable';
                 if(!isMe && (pending === 'crocodile' || pending === 'monkey')) cl += ' targetable';
