@@ -883,18 +883,6 @@ class GameEngine {
                 }
                 this.executePower(activePlayer, this.state.pendingPower.card.animal, payload);
                 break;
-                
-            case 'execute_parrot_give':
-                if(this.state.activeAction !== 'parrot_give') return;
-                const opp = this.state.players.find(p => p.id === payload.targetId);
-                if(opp) {
-                    opp.cards.push(this.state.parrotGiveCard);
-                    ui.logHistory(activePlayer.name, `a donné le ${this.state.parrotGiveCard.animal} à ${opp.name}`, 'parrot');
-                    this.resolveChameleonPair(opp);
-                }
-                this.state.parrotGiveCard = null;
-                this.nextTurn();
-                break;
         }
     }
 
@@ -1047,13 +1035,12 @@ class GameEngine {
                 } else {
                     ui.logHistory(player.name, `s'est trompé. A dit ${guessName} mais c'était ${realName}`, 'parrot');
                     ui.toast(player.id === this.myId
-                        ? `Raté ! C'était un(e) ${realName}. Donnez la carte à un adversaire.`
-                        : `🦜 ${player.name} avait parié ${guessName}... mais c'était un(e) ${realName} !`);
+                        ? `Raté ! C'était un(e) ${realName}. La carte reste sur la pioche.`
+                        : `🦜 ${player.name} s'est trompé ! C'était un(e) ${realName}.`);
                     
-                    this.state.parrotGiveCard = nextC;
-                    this.state.parrotGiveDetails = { guess: guessName, real: realName };
-                    this.state.activeAction = 'parrot_give';
-                    this.broadcastState();
+                    arr.unshift(nextC);
+                    this.state.lastRejected = { animal: nextC.animal, deck: deckId };
+                    this.nextTurn();
                 }
                 break;
                 
@@ -1195,11 +1182,7 @@ class GameEngine {
                 
                 let clickHandler = '';
                 let slotClass = isActive ? 'active-turn' : '';
-                if(this.parrotGiveTargeting && p.id !== this.myId) {
-                    clickHandler = `onclick="game.sendAction('execute_parrot_give', {targetId: '${p.id}'})"`;
-                    slotClass += ' targetable';
-                }
-
+                
                 oppList.innerHTML += `<div class="opponent-slot ${slotClass}" data-id="${p.id}" ${clickHandler}>
                     <div class="opp-header">
                         <div class="opp-name">${p.isBot?'🤖':''} ${p.name}</div>
@@ -1380,24 +1363,6 @@ class GameEngine {
                         cActions.innerHTML = actionsHtml;
                     }
                 }
-                else if(this.state.activeAction === 'parrot_give') {
-                    document.getElementById('drawn-card').style.display = 'flex';
-                    this.parrotGiveTargeting = true;
-                    const c = this.state.parrotGiveCard;
-                    const details = this.state.parrotGiveDetails || {guess: '?', real: '?'};
-                    drawnCardImg.src = `assets/card_${c.animal}.jpg`;
-                    drawnCardImg.style.viewTransitionName = `card-${c.id}`;
-                    actModal.style.display = 'flex';
-                    cActions.style.display = 'flex';
-                    cActions.innerHTML = `
-                        <div style="color:white; font-weight:bold; text-align:center; font-size:1.1rem; line-height:1.4;">
-                            Raté ! 🦜<br>
-                            <span style="font-size:0.9rem; font-weight:normal; color:var(--text-muted);">(Pari: ${details.guess} — C'était: ${details.real})</span><br><br>
-                            Vous devez donner cette carte.<br>
-                            <b>Cliquez sur l'espace d'un adversaire</b> en haut pour lui donner.
-                        </div>
-                    `;
-                }
             }
             
             if(this.state.pendingPower && this.state.pendingPower.showLove) {
@@ -1459,9 +1424,6 @@ class GameEngine {
             if(playerId === this.myId) return; // Cannot target self
             this.monkeyTargeting = false;
             this.sendAction('execute_power', { targetPlayerId: playerId, cardId });
-        } else if(this.parrotGiveTargeting) {
-            this.sendAction('execute_parrot_give', { targetId: playerId });
-            this.parrotGiveTargeting = false;
         } else if(this.crabTargeting) {
             const p = this.state.players.find(x => x.id === playerId);
             if(!p) return;
@@ -1631,15 +1593,6 @@ class GameEngine {
                 const c = this.state.pendingPower.card;
                 const payload = this.getBotPowerPayload(bot, c.animal);
                 this.processAction(bot.id, 'execute_power', payload);
-            }
-            else if(this.state.activeAction === 'parrot_give') {
-                const opps = this.state.players.filter(pl => pl.id !== bot.id);
-                if(opps.length > 0) {
-                    const t = opps[Math.floor(Math.random()*opps.length)];
-                    this.processAction(bot.id, 'execute_parrot_give', { targetId: t.id });
-                } else {
-                    this.nextTurn();
-                }
             }
             } catch(e) {
                 console.error("Bot synchronous action failed:", e);
