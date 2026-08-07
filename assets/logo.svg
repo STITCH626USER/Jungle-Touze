@@ -20,14 +20,42 @@
         stroke-width: 4px;
         filter: drop-shadow(0 0 15px #ff3366) drop-shadow(0 0 30px #ff3366);
       }
-      .palm-tree {
-        font-size: 160px;
-        filter: drop-shadow(0 0 25px #00e5ff) drop-shadow(0 0 45px #00e5ff);
+      .neon-tube {
+        fill: none;
+        stroke: #00e5ff;
+        stroke-linecap: round;
+        stroke-linejoin: round;
+        stroke-width: 1.5px;
+        filter: drop-shadow(0 0 4px #00e5ff) drop-shadow(0 0 10px #00e5ff);
       }
     </style>
+    <linearGradient id="sunsetGrad" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#ffcc00" />
+      <stop offset="50%" stop-color="#ff3366" />
+      <stop offset="100%" stop-color="#cc00ff" />
+    </linearGradient>
+    <g id="synth-sunset">
+      <circle cx="100" cy="100" r="100" fill="url(#sunsetGrad)" filter="drop-shadow(0 0 15px #ff3366)" />
+      <line x1="0" y1="120" x2="200" y2="120" stroke="#0F0F1A" stroke-width="4" />
+      <line x1="0" y1="140" x2="200" y2="140" stroke="#0F0F1A" stroke-width="6" />
+      <line x1="0" y1="165" x2="200" y2="165" stroke="#0F0F1A" stroke-width="8" />
+      <line x1="0" y1="195" x2="200" y2="195" stroke="#0F0F1A" stroke-width="12" />
+    </g>
+    <g id="neon-palm">
+      <path d="M13 8c0-2.76-2.46-5-5.5-5S2 5.24 2 8h2l1-1 1 1h4" />
+      <path d="M13 7.14A5.82 5.82 0 0 1 16.5 6c3.04 0 5.5 2.24 5.5 5h-3l-1-1-1 1h-3" />
+      <path d="M5.89 9.71c-2.15 2.15-2.3 5.47-.35 7.43l4.24-4.25.7-.7.71-.71 2.12-2.12c-1.95-1.96-5.27-1.8-7.42.35" />
+      <path d="M11 15.5c.5 2.5-.17 4.5-1 6.5h4c2-5.5-.5-12-1-14" />
+    </g>
   </defs>
   
-  <text x="300" y="210" class="text-neon palm-tree" opacity="0.25">🌴</text>
-  <text x="300" y="120" class="text-neon text-jungle">JUNGLE</text>
-  <text x="300" y="220" class="text-neon text-touze">TOUZE</text>
+  <g transform="translate(200, 30)" opacity="0.7">
+    <use href="#synth-sunset" />
+  </g>
+  <g transform="translate(252, 60) scale(4)" opacity="0.9">
+    <use href="#neon-palm" class="neon-tube" />
+  </g>
+  
+  <text x="300" y="140" class="text-neon text-jungle">JUNGLE</text>
+  <text x="300" y="240" class="text-neon text-touze">TOUZE</text>
 </svg>
