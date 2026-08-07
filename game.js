@@ -153,6 +153,115 @@ const ui = {
         }, 700);
     },
 
+    animateCrocodileAttack(anim) {
+        const overlay = document.createElement('div');
+        overlay.style.position = 'fixed';
+        overlay.style.inset = '0';
+        overlay.style.zIndex = '999999';
+        overlay.style.pointerEvents = 'none';
+        overlay.style.display = 'flex';
+        overlay.style.alignItems = 'center';
+        overlay.style.justifyContent = 'center';
+        overlay.style.backgroundColor = 'rgba(0,0,0,0.85)';
+        overlay.style.transition = 'opacity 0.3s';
+        document.body.appendChild(overlay);
+
+        const isAttackerMe = anim.attackerId === game.myId;
+        const isTargetMe = anim.targetId === game.myId;
+        
+        let startY = '-100vh';
+        if(isAttackerMe) startY = '100vh';
+
+        let targetY = '0px';
+        if (isTargetMe) targetY = '20vh'; 
+        else if (isAttackerMe) targetY = '-20vh';
+
+        const targetCard = document.createElement('div');
+        targetCard.style.width = '140px';
+        targetCard.style.height = '210px';
+        targetCard.style.backgroundImage = `url(assets/card_${anim.targetCardAnimal}.jpg)`;
+        targetCard.style.backgroundSize = 'contain';
+        targetCard.style.backgroundPosition = 'center';
+        targetCard.style.backgroundRepeat = 'no-repeat';
+        targetCard.style.backgroundColor = 'white';
+        targetCard.style.borderRadius = '12px';
+        targetCard.style.border = '4px solid white';
+        targetCard.style.boxShadow = '0 10px 30px rgba(0,0,0,0.8), 0 0 40px rgba(255,0,0,0.4)';
+        targetCard.style.position = 'absolute';
+        targetCard.style.top = `calc(50% + ${targetY})`;
+        targetCard.style.left = '50%';
+        targetCard.style.transform = 'translate(-50%, -50%) scale(1)';
+        targetCard.style.transition = 'all 0.4s ease-out';
+        overlay.appendChild(targetCard);
+
+        const crocoWrapper = document.createElement('div');
+        crocoWrapper.style.position = 'absolute';
+        crocoWrapper.style.top = `calc(50% + ${targetY})`;
+        crocoWrapper.style.left = '50%';
+        crocoWrapper.style.transform = `translate(-50%, calc(-50% + ${startY})) scale(0.5) rotate(${isAttackerMe ? '-20deg' : '20deg'})`;
+        crocoWrapper.style.transition = 'all 0.4s cubic-bezier(0.34, 1.56, 0.64, 1)';
+        crocoWrapper.style.filter = 'drop-shadow(0 20px 40px rgba(0,0,0,0.9)) drop-shadow(0 0 30px rgba(46,204,113,0.6))';
+
+        const crocoHead = document.createElement('div');
+        crocoHead.style.width = '240px';
+        crocoHead.style.height = '240px';
+        crocoHead.style.backgroundImage = `url(assets/card_crocodile.jpg)`;
+        crocoHead.style.backgroundSize = '360px 540px';
+        crocoHead.style.backgroundPosition = 'center 35%';
+        crocoHead.style.backgroundRepeat = 'no-repeat';
+        crocoHead.style.clipPath = 'circle(42% at 50% 50%)';
+        crocoWrapper.appendChild(crocoHead);
+        overlay.appendChild(crocoWrapper);
+
+        const title = document.createElement('div');
+        title.style.position = 'absolute';
+        title.style.top = '15%';
+        title.style.left = '50%';
+        title.style.transform = 'translateX(-50%)';
+        title.style.color = '#ff4757';
+        title.style.fontSize = 'clamp(1.5rem, 5vw, 2.5rem)';
+        title.style.fontWeight = '900';
+        title.style.textShadow = '0 0 20px rgba(255,71,87,0.8)';
+        title.style.textAlign = 'center';
+        title.style.opacity = '0';
+        title.style.transition = 'opacity 0.4s';
+        title.innerHTML = isAttackerMe ? "VOUS ATTAQUEZ ! 🐊" : "ATTAQUE CROCODILE ! 🐊";
+        overlay.appendChild(title);
+
+        setTimeout(() => {
+            title.style.opacity = '1';
+            crocoWrapper.style.transform = `translate(-50%, -50%) scale(1.4) rotate(0deg)`;
+            
+            setTimeout(() => {
+                const biteAnim = [
+                    { transform: 'translate(-50%, -50%) scale(1.4) rotate(-15deg)' },
+                    { transform: 'translate(-50%, -50%) scale(1.6) rotate(15deg)' },
+                    { transform: 'translate(-50%, -50%) scale(1.4) rotate(-15deg)' },
+                    { transform: 'translate(-50%, -50%) scale(1.6) rotate(15deg)' },
+                    { transform: 'translate(-50%, -50%) scale(1.4) rotate(0deg)' }
+                ];
+                crocoWrapper.animate(biteAnim, { duration: 400, iterations: 1 });
+                if(soundEngine) soundEngine.play('crocodile');
+                
+                setTimeout(() => {
+                    targetCard.style.transition = 'all 0.3s cubic-bezier(0.6, -0.28, 0.735, 0.045)';
+                    targetCard.style.transform = 'translate(-50%, -50%) scale(0) rotate(360deg)';
+                    targetCard.style.opacity = '0';
+                    targetCard.style.filter = 'contrast(200%) brightness(50%)';
+                    
+                    setTimeout(() => {
+                        title.style.opacity = '0';
+                        crocoWrapper.style.transition = 'all 0.4s ease-in';
+                        crocoWrapper.style.transform = `translate(-50%, -50%) scale(2)`;
+                        crocoWrapper.style.opacity = '0';
+                        overlay.style.opacity = '0';
+                        setTimeout(() => overlay.remove(), 400);
+                    }, 800);
+                }, 200);
+            }, 450);
+        }, 50);
+    },
+
     animateMonkeyAttack(anim) {
         const overlay = document.createElement('div');
         overlay.style.position = 'fixed';
