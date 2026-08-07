@@ -564,8 +564,16 @@ class GameEngine {
 
     nextTurn(extraTurnForPlayerId = null) {
         this.clearLocks();
-        if(extraTurnForPlayerId) {
-            this.state.turnIndex = this.state.turnOrder.indexOf(extraTurnForPlayerId);
+        let nextId = extraTurnForPlayerId;
+        const currentP = this.state.players[this.state.turnIndex];
+        
+        if (!nextId && currentP && currentP.extraTurn) {
+            nextId = currentP.id;
+            currentP.extraTurn = false;
+        }
+
+        if(nextId) {
+            this.state.turnIndex = this.state.turnOrder.indexOf(nextId);
         } else {
             this.state.turnIndex = (this.state.turnIndex + 1) % this.state.turnOrder.length;
         }
@@ -831,28 +839,20 @@ class GameEngine {
                     ui.toast(player.id === this.myId 
                         ? `Bien joué ! Vous gagnez le ${guessName} et rejouez !`
                         : `🦜 ${player.name} avait parié ${guessName}... et gagne !`);
-                    player.cards.push(nextC);
-                    this.resolveChameleonPair(player);
-                    this.nextTurn(player.id);
+                    player.extraTurn = true;
+                    this.state.pendingPower = { card: nextC, fromDeck: deckId, parrotSuccess: true };
+                    this.state.activeAction = 'place_or_reject';
+                    this.broadcastState();
                 } else {
                     ui.logHistory(player.name, `s'est trompé. A dit ${guessName} mais c'était ${realName}`, 'parrot');
                     ui.toast(player.id === this.myId
                         ? `Raté ! C'était un(e) ${realName}. Donnez la carte à un adversaire.`
                         : `🦜 ${player.name} avait parié ${guessName}... mais c'était un(e) ${realName} !`);
                     
-                    const opponents = this.state.players.filter(p => p.id !== player.id);
-                    if(opponents.length === 1) {
-                        // Auto give to the only opponent
-                        opponents[0].cards.push(nextC);
-                        ui.logHistory(player.name, `a donné le ${nextC.animal} à ${opponents[0].name}`, 'parrot');
-                        this.resolveChameleonPair(opponents[0]);
-                        this.nextTurn();
-                    } else {
-                        // Must choose opponent
-                        this.state.parrotGiveCard = nextC;
-                        this.state.activeAction = 'parrot_give';
-                        this.broadcastState();
-                    }
+                    this.state.parrotGiveCard = nextC;
+                    this.state.parrotGiveDetails = { guess: guessName, real: realName };
+                    this.state.activeAction = 'parrot_give';
+                    this.broadcastState();
                 }
                 break;
                 
@@ -1105,8 +1105,15 @@ class GameEngine {
                     drawnCardImg.src = `assets/card_${c.animal}.jpg`;
                     drawnCardImg.style.viewTransitionName = `card-${c.id}`;
                     this.isPlacingCard = true;
+                    
+                    let titleHtml = '';
+                    if (this.state.pendingPower.parrotSuccess) {
+                        titleHtml = `<div style="color:var(--gold); font-weight:bold; text-align:center; font-size:1.2rem; margin-bottom:10px;">Gagné ! 🦜<br>Vous avez deviné juste ! Placez-la :</div>`;
+                    }
+                    
                     pActions.innerHTML = `
                         <div style="display:flex; flex-direction:column; gap:8px; width:100%;">
+                            ${titleHtml}
                             <div style="display:flex; gap:8px;">
                                 <button class="btn btn-action btn-main" style="flex:1; padding:10px 5px; border-radius:16px; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:4px;" onclick="game.sendAction('place_card', {side:'left'})">
                                     <div style="font-size:1.1rem; font-weight:900;">⬅ Placer à Gauche</div>
@@ -1174,13 +1181,15 @@ class GameEngine {
                     document.getElementById('drawn-card').style.display = 'flex';
                     this.parrotGiveTargeting = true;
                     const c = this.state.parrotGiveCard;
+                    const details = this.state.parrotGiveDetails || {guess: '?', real: '?'};
                     drawnCardImg.src = `assets/card_${c.animal}.jpg`;
                     drawnCardImg.style.viewTransitionName = `card-${c.id}`;
                     actModal.style.display = 'flex';
                     cActions.style.display = 'flex';
                     cActions.innerHTML = `
                         <div style="color:white; font-weight:bold; text-align:center; font-size:1.1rem; line-height:1.4;">
-                            Raté ! 🦜<br><br>
+                            Raté ! 🦜<br>
+                            <span style="font-size:0.9rem; font-weight:normal; color:var(--text-muted);">(Pari: ${details.guess} — C'était: ${details.real})</span><br><br>
                             Vous devez donner cette carte.<br>
                             <b>Cliquez sur l'espace d'un adversaire</b> en haut pour lui donner.
                         </div>
