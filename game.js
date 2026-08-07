@@ -806,16 +806,37 @@ class GameEngine {
                 
             case 'reject':
                 if(this.state.activeAction !== 'place_or_reject') return;
-                const deckTarget = this.state.pendingPower.fromDeck === 1 ? 2 : 1;
-                this.state.lastRejected = { animal: this.state.pendingPower.card.animal, deck: deckTarget };
-                if (deckTarget === 1) {
+                
+                const originalDeck = this.state.pendingPower.fromDeck;
+                this.state.lastRejected = { animal: this.state.pendingPower.card.animal, deck: originalDeck };
+                
+                // Put rejected card on top of the deck it came from (face up)
+                this.state.pendingPower.card.faceUp = true;
+                if (originalDeck === 1) {
                     if(this.state.deckLeft) this.state.deckLeft.unshift(this.state.pendingPower.card);
                 } else {
                     if(this.state.deckRight) this.state.deckRight.unshift(this.state.pendingPower.card);
                 }
                 
                 ui.logHistory(activePlayer.name, 'a jeté sa carte', null);
-                this.nextTurn();
+                
+                // Force draw from the OTHER deck
+                const otherDeckId = originalDeck === 1 ? 2 : 1;
+                const otherDeckArr = otherDeckId === 1 ? this.state.deckLeft : this.state.deckRight;
+                
+                if (otherDeckArr && otherDeckArr.length > 0) {
+                    const forcedDrawn = otherDeckArr.shift();
+                    
+                    if(this.state.lastRejected && this.state.lastRejected.deck === otherDeckId) {
+                        this.state.lastRejected = null;
+                    }
+                    
+                    this.state.pendingPower = { card: forcedDrawn, fromDeck: otherDeckId, forced: true };
+                    ui.logHistory(activePlayer.name, 'pioche obligatoirement dans la pile opposée', null);
+                    this.broadcastState();
+                } else {
+                    this.nextTurn();
+                }
                 break;
 
             case 'place_card':
@@ -1138,26 +1159,36 @@ class GameEngine {
         if (!this.state || !this.state.players) return;
         
         const updateDOM = () => {
-            const pCount = document.getElementById('deck-left-count');
-            const pCount2 = document.getElementById('deck-right-count');
-            if(pCount) pCount.textContent = this.state.deckLeft ? this.state.deckLeft.length : (this.state.deck1 ? this.state.deck1.length : 32);
-            if(pCount2) pCount2.textContent = this.state.deckRight ? this.state.deckRight.length : (this.state.deck2 ? this.state.deck2.length : 32);
-            
-            if(this.state.lastRejected) {
-                if(this.state.lastRejected.deck === 1) {
-                    document.getElementById('deck-left-thumbnail').style.display = 'block';
-                    document.getElementById('deck-left-thumbnail').src = `assets/card_${this.state.lastRejected.animal}.jpg`;
-                    document.getElementById('deck-right-thumbnail').style.display = 'none';
-                } else {
-                    document.getElementById('deck-right-thumbnail').style.display = 'block';
-                    document.getElementById('deck-right-thumbnail').src = `assets/card_${this.state.lastRejected.animal}.jpg`;
-                    document.getElementById('deck-left-thumbnail').style.display = 'none';
-                }
-            } else {
+            // Setup decks visually
+            const d1 = document.getElementById('deck-1');
+            const d2 = document.getElementById('deck-2');
+            if(d1) {
+                const pCount = document.getElementById('deck-left-count');
+                if(pCount) pCount.textContent = this.state.deckLeft ? this.state.deckLeft.length : 0;
+                
                 const dt1 = document.getElementById('deck-left-thumbnail');
-                if(dt1) dt1.style.display = 'none';
+                if(dt1) {
+                    if (this.state.deckLeft && this.state.deckLeft.length > 0 && this.state.deckLeft[0].faceUp) {
+                        dt1.style.display = 'block';
+                        dt1.src = `assets/card_${this.state.deckLeft[0].animal}.jpg`;
+                    } else {
+                        dt1.style.display = 'none';
+                    }
+                }
+            }
+            if(d2) {
+                const pCount = document.getElementById('deck-right-count');
+                if(pCount) pCount.textContent = this.state.deckRight ? this.state.deckRight.length : 0;
+                
                 const dt2 = document.getElementById('deck-right-thumbnail');
-                if(dt2) dt2.style.display = 'none';
+                if(dt2) {
+                    if (this.state.deckRight && this.state.deckRight.length > 0 && this.state.deckRight[0].faceUp) {
+                        dt2.style.display = 'block';
+                        dt2.src = `assets/card_${this.state.deckRight[0].animal}.jpg`;
+                    } else {
+                        dt2.style.display = 'none';
+                    }
+                }
             }
             
             const myData = this.state.players.find(p => p.id === this.myId);
@@ -1296,11 +1327,16 @@ class GameEngine {
                     this.isPlacingCard = true;
                     
                     let titleHtml = '';
-                    if (this.state.pendingPower.parrotSuccess) {
+                    if (this.state.pendingPower.forced) {
+                        titleHtml = `<div style="color:var(--danger); font-weight:bold; text-align:center; font-size:1.2rem; margin-bottom:10px;">Carte piochée obligatoirement !<br>Vous devez la placer :</div>`;
+                    } else if (this.state.pendingPower.parrotSuccess) {
                         titleHtml = `<div style="color:var(--gold); font-weight:bold; text-align:center; font-size:1.2rem; margin-bottom:10px;">Gagné ! 🦜<br>Vous avez deviné juste ! Placez-la :</div>`;
                     } else if (this.state.pendingPower.monkeySuccess) {
                         titleHtml = `<div style="color:var(--gold); font-weight:bold; text-align:center; font-size:1.2rem; margin-bottom:10px;">Vol réussi ! 🐒<br>Où placer la carte volée ?</div>`;
                     }
+                    
+                    const isForced = this.state.pendingPower.forced;
+                    const rejectBtnHtml = isForced ? '' : `<button class="btn btn-action btn-reject" style="width:100%; border-radius:16px; padding:12px;" onclick="game.sendAction('reject')">❌ Jeter la carte</button>`;
                     
                     pActions.innerHTML = `
                         <div style="display:flex; flex-direction:column; gap:8px; width:100%;">
@@ -1313,7 +1349,7 @@ class GameEngine {
                                     <div style="font-size:1.1rem; font-weight:900;">Placer à Droite ➡</div>
                                 </button>
                             </div>
-                            <button class="btn btn-action btn-reject" style="width:100%; border-radius:16px; padding:12px;" onclick="game.sendAction('reject')">❌ Jeter la carte</button>
+                            ${rejectBtnHtml}
                         </div>
                     `;
                 }
@@ -1614,7 +1650,8 @@ class GameEngine {
                 this.processAction(bot.id, 'draw', { deck: dId });
             } 
             else if(this.state.activeAction === 'place_or_reject') {
-                const keep = Math.random() > 0.15;
+                const isForced = this.state.pendingPower && this.state.pendingPower.forced;
+                const keep = isForced ? true : Math.random() > 0.15;
                 if(keep) {
                     const side = Math.random() > 0.5 ? 'left' : 'right';
                     this.processAction(bot.id, 'place_card', { side });
