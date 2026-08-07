@@ -1354,8 +1354,8 @@ class GameEngine {
                     let cl = "card";
                     if(isMyTurn && this.state.activeAction === 'power_target') {
                         const pending = this.state.pendingPower.card.animal;
-                        // Crocodile and monkey target OPPONENT cards; crab targets OWN cards (not here)
-                        if(pending === 'crocodile' || pending === 'monkey') cl += ' targetable';
+                        // Croc and monkey: target opponent cards. Crab: can target any player's cards.
+                        if(pending === 'crocodile' || pending === 'monkey' || pending === 'crab') cl += ' targetable';
                     }
                     if(this.state.status === 'ended' && this.state.winner && this.state.winner.id === p.id) {
                         cl += ' winning-card';
@@ -1599,8 +1599,9 @@ class GameEngine {
             
             if(this.state.activeAction === 'power_target' && isMyTurn) {
                 const pending = this.state.pendingPower.card.animal;
-                if(isMe && (pending === 'crab')) cl += ' targetable'; // crab = own cards
-                if(!isMe && (pending === 'crocodile' || pending === 'monkey')) cl += ' targetable'; // croc/monkey = opponent cards
+                // Crab targets OWN cards AND opponent cards; croc/monkey = opponent cards only
+                if(isMe && (pending === 'crab')) cl += ' targetable';
+                if(!isMe && (pending === 'crocodile' || pending === 'monkey' || pending === 'crab')) cl += ' targetable';
                 if(this.crabTargetCard && this.crabTargetCard.cId === c.id) cl += ' selected-target';
             }
             if(this.state.status === 'ended' && this.state.winner && this.state.winner.cards.some(wc => wc.id === c.id)) {
@@ -1620,61 +1621,84 @@ class GameEngine {
     }
 
     handleCardClick(playerId, cardId) {
-        if(this.crocodileTargeting) {
-            if(playerId === this.myId) return; // Cannot target self
-            this.crocodileTargeting = false;
-            this.sendAction('execute_power', { targetPlayerId: playerId, cardId });
-        } else if(this.monkeyTargeting) {
-            if(playerId === this.myId) return; // Cannot target self
-            this.monkeyTargeting = false;
-            this.sendAction('execute_power', { targetPlayerId: playerId, cardId });
-        } else if(this.crabTargeting) {
-            const p = this.state.players.find(x => x.id === playerId);
-            if(!p) return;
-            const idx = p.cards.findIndex(c => c.id === cardId);
-            if(idx !== -1) {
-                this.crabTargetCard = { pId: playerId, originalIdx: idx, currentIdx: idx, cId: cardId };
-                ui.toast("🦀 Déplacez la carte, puis validez");
-                this.renderState();
-            }
-        } else {
-            const p = this.state.players.find(x => x.id === playerId);
-            if(!p) return;
-            const c = p.cards.find(x => x.id === cardId);
-            if(!c) return;
-            
-            const powerDesc = {
-                lion: 'Victoire: 8 animaux différents',
-                chameleon: 'Joker magique ! 2 caméléons = détruits.',
-                octopus: 'Victoire: 3 paires différentes',
-                crocodile: 'Élimine 1 carte chez un adversaire.',
-                monkey: 'Volez une carte à un adversaire, le singe prend sa place.',
-                crab: 'Faites glisser cette carte dans la rangée = 1 pioche sup.',
-                parrot: 'Devinez la prochaine carte = 1 pioche sup.',
-                hermit_crab: 'Rejouez si vous avez un Crabe dans votre jeu.'
-            };
-            const animalNames = {
-                lion: 'Lion', chameleon: 'Caméléon', octopus: 'Pieuvre',
-                crocodile: 'Crocodile', monkey: 'Singe', crab: 'Crabe',
-                parrot: 'Perroquet', hermit_crab: 'Bernard l\'Hermite'
-            };
+        // --- STATE-DRIVEN targeting: read current state directly, no reliance on stale flags ---
+        const activePlayer = this.state.players[this.state.turnIndex];
+        const isMyTurn = activePlayer && activePlayer.id === this.myId;
+        const isPowerTarget = isMyTurn
+            && this.state.status === 'playing'
+            && this.state.activeAction === 'power_target'
+            && this.state.pendingPower
+            && this.state.pendingPower.card;
 
-            const img = document.getElementById('admire-card-img');
-            const nameEl = document.getElementById('admire-card-name');
-            const powerEl = document.getElementById('admire-card-power');
-            const oppNameEl = document.getElementById('admire-opp-name');
+        if(isPowerTarget) {
+            const animal = this.state.pendingPower.card.animal;
 
-            if(playerId === this.myId) {
-                oppNameEl.style.display = 'none';
-            } else {
-                oppNameEl.style.display = 'block';
-                oppNameEl.textContent = `Carte de ${p.name}`;
+            if(animal === 'crocodile') {
+                if(playerId === this.myId) return; // Cannot target self
+                this.crocodileTargeting = false;
+                this.sendAction('execute_power', { targetPlayerId: playerId, cardId });
+                return;
             }
-            img.src = `assets/card_${c.animal}.jpg`;
-            nameEl.textContent = animalNames[c.animal];
-            powerEl.textContent = powerDesc[c.animal];
-            ui.showModal('card-admire-modal');
+
+            if(animal === 'monkey') {
+                if(playerId === this.myId) return; // Cannot target self
+                this.monkeyTargeting = false;
+                this.sendAction('execute_power', { targetPlayerId: playerId, cardId });
+                return;
+            }
+
+            if(animal === 'crab') {
+                // If crabTargetCard is already set, this click replaces the selection
+                const p = this.state.players.find(x => x.id === playerId);
+                if(!p) return;
+                const idx = p.cards.findIndex(c => c.id === cardId);
+                if(idx !== -1) {
+                    this.crabTargetCard = { pId: playerId, originalIdx: idx, currentIdx: idx, cId: cardId };
+                    ui.toast("🦀 Déplacez la carte avec ⬅ ➡ puis validez");
+                    this.renderState();
+                }
+                return;
+            }
+            // parrot is handled via its own modal (not card click)
         }
+
+        // --- Default: show card info modal ---
+        const p = this.state.players.find(x => x.id === playerId);
+        if(!p) return;
+        const c = p.cards.find(x => x.id === cardId);
+        if(!c) return;
+        
+        const powerDesc = {
+            lion: 'Victoire: 8 animaux différents',
+            chameleon: 'Joker magique ! 2 caméléons = détruits.',
+            octopus: 'Victoire: 3 paires différentes',
+            crocodile: 'Élimine 1 carte chez un adversaire.',
+            monkey: 'Volez une carte à un adversaire, le singe prend sa place.',
+            crab: 'Faites glisser cette carte dans la rangée = 1 pioche sup.',
+            parrot: 'Devinez la prochaine carte = 1 pioche sup.',
+            hermit_crab: 'Rejouez si vous avez un Crabe dans votre jeu.'
+        };
+        const animalNames = {
+            lion: 'Lion', chameleon: 'Caméléon', octopus: 'Pieuvre',
+            crocodile: 'Crocodile', monkey: 'Singe', crab: 'Crabe',
+            parrot: 'Perroquet', hermit_crab: "Bernard l'Hermite"
+        };
+
+        const img = document.getElementById('admire-card-img');
+        const nameEl = document.getElementById('admire-card-name');
+        const powerEl = document.getElementById('admire-card-power');
+        const oppNameEl = document.getElementById('admire-opp-name');
+
+        if(playerId === this.myId) {
+            oppNameEl.style.display = 'none';
+        } else {
+            oppNameEl.style.display = 'block';
+            oppNameEl.textContent = `Carte de ${p.name}`;
+        }
+        img.src = `assets/card_${c.animal}.jpg`;
+        nameEl.textContent = animalNames[c.animal];
+        powerEl.textContent = powerDesc[c.animal];
+        ui.showModal('card-admire-modal');
     }
     
     cancelCrabTarget() {
