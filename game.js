@@ -704,6 +704,19 @@ class GameEngine {
     }
 
     executePower(player, animal, payload) {
+        this.state.lastAnimation = {
+            id: Date.now(),
+            type: 'power',
+            playerId: player.id,
+            power: animal
+        };
+
+        const animalNames = {
+            lion: 'Lion', chameleon: 'Caméléon', octopus: 'Pieuvre',
+            crocodile: 'Crocodile', monkey: 'Singe', crab: 'Crabe',
+            parrot: 'Perroquet', hermit_crab: 'Bernard l\'Hermite'
+        };
+
         switch(animal) {
             case 'crocodile':
                 if(!payload.targetPlayerId) {
@@ -711,11 +724,15 @@ class GameEngine {
                     this.broadcastState();
                     return; // Wait for target
                 }
-                // payload { targetPlayerId, cardId }
-                const tPlayer = this.state.players.find(p => p.id === payload.targetPlayerId);
-                if(tPlayer) {
-                    tPlayer.cards = tPlayer.cards.filter(c => c.id !== payload.cardId);
-                    ui.logHistory(player.name, `a croqué une carte chez ${tPlayer.name}`, 'crocodile');
+                const p2 = this.state.players.find(p => p.id === payload.targetPlayerId);
+                if(p2) {
+                    const c2 = p2.cards.find(c => c.id === payload.cardId);
+                    p2.cards = p2.cards.filter(c => c.id !== payload.cardId);
+                    ui.logHistory(player.name, `a éliminé le ${c2.animal} de ${p2.name}`, 'crocodile');
+                    if (player.id !== this.myId) {
+                        const anName = animalNames[c2.animal] || c2.animal;
+                        ui.toast(`🐊 ${player.name} élimine le ${anName} de ${p2.name} !`);
+                    }
                 }
                 this.nextTurn();
                 break;
@@ -728,17 +745,20 @@ class GameEngine {
                 }
                 // payload { target1: {pId, cId}, target2: {pId, cId} }
                 const p1 = this.state.players.find(p => p.id === payload.target1.pId);
-                const p2 = this.state.players.find(p => p.id === payload.target2.pId);
-                if(p1 && p2) {
+                const p_2 = this.state.players.find(p => p.id === payload.target2.pId);
+                if(p1 && p_2) {
                     const idx1 = p1.cards.findIndex(c => c.id === payload.target1.cId);
-                    const idx2 = p2.cards.findIndex(c => c.id === payload.target2.cId);
+                    const idx2 = p_2.cards.findIndex(c => c.id === payload.target2.cId);
                     if(idx1 > -1 && idx2 > -1) {
                         const tmp = p1.cards[idx1];
-                        p1.cards[idx1] = p2.cards[idx2];
-                        p2.cards[idx2] = tmp;
+                        p1.cards[idx1] = p_2.cards[idx2];
+                        p_2.cards[idx2] = tmp;
                         ui.logHistory(player.name, 'a échangé 2 cartes', 'monkey');
+                        if (player.id !== this.myId) {
+                            ui.toast(`🐒 ${player.name} a échangé des cartes !`);
+                        }
                         this.resolveChameleonPair(p1);
-                        this.resolveChameleonPair(p2);
+                        this.resolveChameleonPair(p_2);
                     }
                 }
                 this.nextTurn();
@@ -757,9 +777,12 @@ class GameEngine {
                     cp.cards.splice(payload.toIndex, 0, moved);
                     ui.logHistory(player.name, 'a glissé une carte', 'crab');
                     this.resolveChameleonPair(cp);
+                    if (player.id !== this.myId) {
+                        ui.toast(`🦀 ${player.name} glisse une carte et rejoue !`);
+                    } else {
+                        ui.toast("🦀 Pouvoir Crabe — Glissez une carte et REJOUEZ !");
+                    }
                 }
-                // Extra turn!
-                ui.toast("🦀 Pouvoir Crabe — Glissez une carte et REJOUEZ !");
                 this.nextTurn(player.id);
                 break;
                 
@@ -785,21 +808,29 @@ class GameEngine {
                     this.broadcastState();
                     return;
                 }
+                
+                const guessName = animalNames[payload.guess] || payload.guess;
+                
                 // First draw next card
                 const deckId = payload.guessDeck || 1;
                 const arr = deckId === 1 ? this.state.deckLeft : this.state.deckRight;
                 if(arr.length === 0) { this.nextTurn(); return; }
                 const nextC = arr.pop();
+                const realName = animalNames[nextC.animal] || nextC.animal;
                 
                 if(nextC.animal === payload.guess) {
-                    ui.logHistory(player.name, `a deviné ${payload.guess} avec succès!`, 'parrot');
-                    ui.toast("Bien joué ! Vous gagnez la carte et rejouez !");
+                    ui.logHistory(player.name, `a deviné ${guessName} avec succès!`, 'parrot');
+                    ui.toast(player.id === this.myId 
+                        ? `Bien joué ! Vous gagnez le ${guessName} et rejouez !`
+                        : `🦜 ${player.name} avait parié ${guessName}... et gagne !`);
                     player.cards.push(nextC);
                     this.resolveChameleonPair(player);
                     this.nextTurn(player.id);
                 } else {
-                    ui.logHistory(player.name, `s'est trompé. C'était ${nextC.animal}`, 'parrot');
-                    ui.toast(`Raté ! Donnez la carte à un adversaire.`);
+                    ui.logHistory(player.name, `s'est trompé. A dit ${guessName} mais c'était ${realName}`, 'parrot');
+                    ui.toast(player.id === this.myId
+                        ? `Raté ! C'était un(e) ${realName}. Donnez la carte à un adversaire.`
+                        : `🦜 ${player.name} avait parié ${guessName}... mais c'était un(e) ${realName} !`);
                     
                     const opponents = this.state.players.filter(p => p.id !== player.id);
                     if(opponents.length === 1) {
@@ -904,224 +935,246 @@ class GameEngine {
 
     // --- RENDER STATE TO DOM ---
     renderState() {
-        const pCount = document.getElementById('deck-left-count');
-        const pCount2 = document.getElementById('deck-right-count');
-        if(pCount) pCount.textContent = this.state.deckLeft ? this.state.deckLeft.length : (this.state.deck1 ? this.state.deck1.length : 32);
-        if(pCount2) pCount2.textContent = this.state.deckRight ? this.state.deckRight.length : (this.state.deck2 ? this.state.deck2.length : 32);
+        if (!this.state || !this.state.players) return;
         
-        if(this.state.lastRejected) {
-            if(this.state.lastRejected.deck === 1) {
-                document.getElementById('deck-left-thumbnail').style.display = 'block';
-                document.getElementById('deck-left-thumbnail').src = `assets/card_${this.state.lastRejected.animal}.jpg`;
-                document.getElementById('deck-right-thumbnail').style.display = 'none';
-            } else {
-                document.getElementById('deck-right-thumbnail').style.display = 'block';
-                document.getElementById('deck-right-thumbnail').src = `assets/card_${this.state.lastRejected.animal}.jpg`;
-                document.getElementById('deck-left-thumbnail').style.display = 'none';
-            }
-        } else {
-            const dt1 = document.getElementById('deck-left-thumbnail');
-            if(dt1) dt1.style.display = 'none';
-            const dt2 = document.getElementById('deck-right-thumbnail');
-            if(dt2) dt2.style.display = 'none';
-        }
-        
-        const myData = this.state.players.find(p => p.id === this.myId);
-        if(!myData) return; // Spectator or not yet joined fully
-        
-        document.getElementById('my-score').textContent = myData.score;
-        this.renderRow('my-row', myData.cards, true);
-        
-        const oppList = document.getElementById('opponents-vertical-list');
-        oppList.innerHTML = '';
-        this.state.players.forEach((p, idx) => {
-            if(p.id === this.myId) return;
-            const isActive = this.state.status === 'playing' && this.state.turnIndex === idx;
+        const updateDOM = () => {
+            const pCount = document.getElementById('deck-left-count');
+            const pCount2 = document.getElementById('deck-right-count');
+            if(pCount) pCount.textContent = this.state.deckLeft ? this.state.deckLeft.length : (this.state.deck1 ? this.state.deck1.length : 32);
+            if(pCount2) pCount2.textContent = this.state.deckRight ? this.state.deckRight.length : (this.state.deck2 ? this.state.deck2.length : 32);
             
-            let cardsHtml = '';
-            p.cards.forEach(c => {
-                let cl = "";
-                if(this.state.activeAction === 'power_target') {
-                    const pending = this.state.pendingPower.card.animal;
-                    if(pending === 'crocodile' || pending === 'monkey') cl += ' targetable';
-                    if(this.monkeyTarget1 && this.monkeyTarget1.cId === c.id) cl += ' selected-target';
+            if(this.state.lastRejected) {
+                if(this.state.lastRejected.deck === 1) {
+                    document.getElementById('deck-left-thumbnail').style.display = 'block';
+                    document.getElementById('deck-left-thumbnail').src = `assets/card_${this.state.lastRejected.animal}.jpg`;
+                    document.getElementById('deck-right-thumbnail').style.display = 'none';
+                } else {
+                    document.getElementById('deck-right-thumbnail').style.display = 'block';
+                    document.getElementById('deck-right-thumbnail').src = `assets/card_${this.state.lastRejected.animal}.jpg`;
+                    document.getElementById('deck-left-thumbnail').style.display = 'none';
                 }
-                if(this.state.status === 'ended' && this.state.winner && this.state.winner.id === p.id) {
-                    cl += ' winning-card';
+            } else {
+                const dt1 = document.getElementById('deck-left-thumbnail');
+                if(dt1) dt1.style.display = 'none';
+                const dt2 = document.getElementById('deck-right-thumbnail');
+                if(dt2) dt2.style.display = 'none';
+            }
+            
+            const myData = this.state.players.find(p => p.id === this.myId);
+            if(!myData) return; // Spectator or not yet joined fully
+            
+            document.getElementById('my-score').textContent = myData.score;
+            this.renderRow('my-row', myData.cards, true);
+            
+            const oppList = document.getElementById('opponents-vertical-list');
+            oppList.innerHTML = '';
+            this.state.players.forEach((p, idx) => {
+                if(p.id === this.myId) return;
+                const isActive = this.state.status === 'playing' && this.state.turnIndex === idx;
+                
+                let cardsHtml = '';
+                p.cards.forEach(c => {
+                    let cl = "card";
+                    if(this.state.activeAction === 'power_target') {
+                        const pending = this.state.pendingPower.card.animal;
+                        if(pending === 'crocodile' || pending === 'monkey') cl += ' targetable';
+                        if(this.monkeyTarget1 && this.monkeyTarget1.cId === c.id) cl += ' selected-target';
+                    }
+                    if(this.state.status === 'ended' && this.state.winner && this.state.winner.id === p.id) {
+                        cl += ' winning-card';
+                    }
+                    cardsHtml += `<img src="assets/card_${c.animal}.jpg" class="${cl}" data-cardid="${c.id}" style="view-transition-name: card-${c.id};" onclick="game.handleCardClick('${p.id}', '${c.id}')">`;
+                });
+                
+                let clickHandler = '';
+                let slotClass = isActive ? 'active-turn' : '';
+                if(this.parrotGiveTargeting && p.id !== this.myId) {
+                    clickHandler = `onclick="game.sendAction('execute_parrot_give', {targetId: '${p.id}'})"`;
+                    slotClass += ' targetable';
                 }
-                cardsHtml += `<img src="assets/card_${c.animal}.jpg" class="${cl}" data-cardid="${c.id}" onclick="game.handleCardClick('${p.id}', '${c.id}')">`;
+
+                oppList.innerHTML += `<div class="opponent-slot ${slotClass}" data-id="${p.id}" ${clickHandler}>
+                    <div class="opp-header">
+                        <div class="opp-name">${p.isBot?'🤖':''} ${p.name}</div>
+                        <div class="opp-score">🏆 ${p.cards.length}/8</div>
+                    </div>
+                    <div class="opp-cards-mini">${cardsHtml}</div>
+                </div>`;
             });
             
-            let clickHandler = '';
-            let slotClass = isActive ? 'active-turn' : '';
-            if(this.parrotGiveTargeting && p.id !== this.myId) {
-                clickHandler = `onclick="game.sendAction('execute_parrot_give', {targetId: '${p.id}'})"`;
-                slotClass += ' targetable';
-            }
-
-            oppList.innerHTML += `<div class="opponent-slot ${slotClass}" data-id="${p.id}" ${clickHandler}>
-                <div class="opp-header">
-                    <div class="opp-name">${p.isBot?'🤖':''} ${p.name}</div>
-                    <div class="opp-score">🏆 ${p.cards.length}/8</div>
-                </div>
-                <div class="opp-cards-mini">${cardsHtml}</div>
-            </div>`;
-        });
-        
-        // Handle animations
-        if(this.state.lastAnimation && this.lastAnimationId !== this.state.lastAnimation.id) {
-            this.lastAnimationId = this.state.lastAnimation.id;
-            if(this.state.lastAnimation.type === 'place' && this.state.lastAnimation.playerId !== this.myId) {
-                ui.animateCardToOpponent(this.state.lastAnimation.playerId, this.state.lastAnimation.animal);
-            }
-        }
-
-        if (this.state.status === 'ended' && this.state.winner) {
-            ui.showRoundEndModal(this.state.winner);
-            return;
-        } else {
-            ui.hideModal('round-end-modal');
-        }
-
-        const activePlayer = this.state.players[this.state.turnIndex];
-        const isMyTurn = activePlayer && activePlayer.id === this.myId;
-        const localArea = document.getElementById('local-player-area');
-        
-        if (activePlayer) {
-            const turnInd = document.getElementById('turn-indicator');
-            if(isMyTurn) {
-                turnInd.textContent = "À VOTRE TOUR";
-                turnInd.classList.remove('opp-turn');
-                localArea.classList.add('active-turn');
-                document.getElementById('inactivity-timer-badge').style.display = 'block';
-                this.startTimer();
-                this.startAfkTimer();
-                ui.toast("À vous de jouer ✨");
-            } else {
-                turnInd.textContent = `Tour de : ${activePlayer.name}`;
-                turnInd.classList.add('opp-turn');
-                localArea.classList.remove('active-turn');
-                document.getElementById('inactivity-timer-badge').style.display = 'none';
-                this.stopTimer();
-                this.stopAfkTimer();
-                if(activePlayer.isBot && this.isHost) {
-                    this.playBotTurn(activePlayer);
+            // Handle animations
+            if(this.state.lastAnimation && this.lastAnimationId !== this.state.lastAnimation.id) {
+                this.lastAnimationId = this.state.lastAnimation.id;
+                if(this.state.lastAnimation.type === 'place' && this.state.lastAnimation.playerId !== this.myId) {
+                    ui.animateCardToOpponent(this.state.lastAnimation.playerId, this.state.lastAnimation.animal);
+                } else if(this.state.lastAnimation.type === 'power') {
+                    const row = document.querySelector(`.opponent-slot[data-id="${this.state.lastAnimation.playerId}"]`);
+                    if(row) {
+                        row.style.boxShadow = '0 0 20px 5px var(--primary)';
+                        row.style.transition = 'box-shadow 0.5s';
+                        setTimeout(() => row.style.boxShadow = 'none', 1000);
+                    }
                 }
             }
-        }
 
-        // Handle Active Action Modals/Buttons
-        const actModal = document.getElementById('action-modal');
-        const cActions = document.getElementById('card-actions');
-        const pActions = document.getElementById('placement-actions');
-        
-        actModal.style.display = 'none';
-        cActions.style.display = 'none';
-        pActions.style.display = 'none';
-        
-        if (activePlayer && !isMyTurn && this.state.status === 'playing') {
-            if (this.state.activeAction === 'place_or_reject' || this.state.activeAction === 'power_target') {
-                if(this.state.pendingPower && this.state.pendingPower.card) {
+            if (this.state.status === 'ended' && this.state.winner) {
+                ui.showRoundEndModal(this.state.winner);
+                return;
+            } else {
+                ui.hideModal('round-end-modal');
+            }
+
+            const activePlayer = this.state.players[this.state.turnIndex];
+            const isMyTurn = activePlayer && activePlayer.id === this.myId;
+            const localArea = document.getElementById('local-player-area');
+            
+            if (activePlayer) {
+                const turnInd = document.getElementById('turn-indicator');
+                if(isMyTurn) {
+                    turnInd.textContent = "À VOTRE TOUR";
+                    turnInd.classList.remove('opp-turn');
+                    localArea.classList.add('active-turn');
+                    document.getElementById('inactivity-timer-badge').style.display = 'block';
+                    this.startTimer();
+                    this.startAfkTimer();
+                    ui.toast("À vous de jouer ✨");
+                } else {
+                    turnInd.textContent = `Tour de : ${activePlayer.name}`;
+                    turnInd.classList.add('opp-turn');
+                    localArea.classList.remove('active-turn');
+                    document.getElementById('inactivity-timer-badge').style.display = 'none';
+                    this.stopTimer();
+                    this.stopAfkTimer();
+                    if(activePlayer.isBot && this.isHost) {
+                        this.playBotTurn(activePlayer);
+                    }
+                }
+            }
+
+            // Handle Active Action Modals/Buttons
+            const actModal = document.getElementById('action-modal');
+            const cActions = document.getElementById('card-actions');
+            const pActions = document.getElementById('placement-actions');
+            
+            actModal.style.display = 'none';
+            cActions.style.display = 'none';
+            pActions.style.display = 'none';
+            
+            if (activePlayer && !isMyTurn && this.state.status === 'playing') {
+                if (this.state.activeAction === 'place_or_reject' || this.state.activeAction === 'power_target') {
+                    if(this.state.pendingPower && this.state.pendingPower.card) {
+                        actModal.style.display = 'flex';
+                        const c = this.state.pendingPower.card;
+                        document.getElementById('drawn-card-img').src = `assets/card_${c.animal}.jpg`;
+                        cActions.style.display = 'flex';
+                        cActions.innerHTML = `<p style="color:var(--secondary);text-align:center;font-weight:900;margin:0;font-size:1.2rem;">${activePlayer.name} réfléchit...</p>`;
+                    }
+                }
+            }
+            
+            if(!isMyTurn) {
+                this.isPlacingCard = false; // Liveness check
+                ui.hideModal('parrot-modal');
+            }
+
+            if(isMyTurn && this.state.status === 'playing') {
+                if(this.state.activeAction === 'place_or_reject') {
+                    document.getElementById('drawn-card').style.display = 'flex';
                     actModal.style.display = 'flex';
+                    pActions.style.display = 'flex';
                     const c = this.state.pendingPower.card;
                     document.getElementById('drawn-card-img').src = `assets/card_${c.animal}.jpg`;
-                    cActions.style.display = 'flex';
-                    cActions.innerHTML = `<p style="color:var(--secondary);text-align:center;font-weight:900;margin:0;font-size:1.2rem;">${activePlayer.name} réfléchit...</p>`;
-                }
-            }
-        }
-        
-        if(!isMyTurn) {
-            this.isPlacingCard = false; // Liveness check
-            ui.hideModal('parrot-modal');
-        }
-
-        if(isMyTurn && this.state.status === 'playing') {
-            if(this.state.activeAction === 'place_or_reject') {
-                document.getElementById('drawn-card').style.display = 'flex';
-                actModal.style.display = 'flex';
-                pActions.style.display = 'flex';
-                const c = this.state.pendingPower.card;
-                document.getElementById('drawn-card-img').src = `assets/card_${c.animal}.jpg`;
-                this.isPlacingCard = true;
-                pActions.innerHTML = `
-                    <div style="display:flex; flex-direction:column; gap:8px; width:100%;">
-                        <div style="display:flex; gap:8px;">
-                            <button class="btn btn-action btn-main" style="flex:1; padding:10px 5px; border-radius:16px; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:4px;" onclick="game.sendAction('place_card', {side:'left'})">
-                                <div style="font-size:1.1rem; font-weight:900;">⬅ Placer à Gauche</div>
-                            </button>
-                            <button class="btn btn-action btn-main" style="flex:1; padding:10px 5px; border-radius:16px; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:4px;" onclick="game.sendAction('place_card', {side:'right'})">
-                                <div style="font-size:1.1rem; font-weight:900;">Placer à Droite ➡</div>
-                            </button>
+                    this.isPlacingCard = true;
+                    pActions.innerHTML = `
+                        <div style="display:flex; flex-direction:column; gap:8px; width:100%;">
+                            <div style="display:flex; gap:8px;">
+                                <button class="btn btn-action btn-main" style="flex:1; padding:10px 5px; border-radius:16px; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:4px;" onclick="game.sendAction('place_card', {side:'left'})">
+                                    <div style="font-size:1.1rem; font-weight:900;">⬅ Placer à Gauche</div>
+                                </button>
+                                <button class="btn btn-action btn-main" style="flex:1; padding:10px 5px; border-radius:16px; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:4px;" onclick="game.sendAction('place_card', {side:'right'})">
+                                    <div style="font-size:1.1rem; font-weight:900;">Placer à Droite ➡</div>
+                                </button>
+                            </div>
+                            <button class="btn btn-action btn-reject" style="width:100%; border-radius:16px; padding:12px;" onclick="game.sendAction('reject')">❌ Jeter la carte</button>
                         </div>
-                        <button class="btn btn-action btn-reject" style="width:100%; border-radius:16px; padding:12px;" onclick="game.sendAction('reject')">❌ Jeter la carte</button>
-                    </div>
-                `;
-            }
-            else if(this.state.activeAction === 'power_target') {
-                document.getElementById('drawn-card').style.display = 'none';
-                const c = this.state.pendingPower.card;
-                ui.toast(`Pouvoir ${c.animal} : Sélectionnez une cible sur le plateau !`);
-                
-                if(c.animal === 'parrot') {
-                    ui.showModal('parrot-modal');
-                    const grid = document.getElementById('parrot-animal-grid');
-                    grid.innerHTML = '';
-                    this.selectedParrotGuess = null;
-                    document.getElementById('parrot-placement-actions').style.display = 'none';
-                    ANIMALS.forEach(a => {
-                        grid.innerHTML += `<div class="parrot-animal-cell" id="parrot-cell-${a.id}" onclick="game.selectParrotAnimal('${a.id}')">
-                            <img src="assets/card_${a.id}.jpg">
-                            <span>${a.name}</span>
-                        </div>`;
-                    });
-                } else {
-                    let instruction = '';
-                    if(c.animal === 'crocodile') {
-                        this.crocodileTargeting = true;
-                        instruction = "🐊 Cliquez directement sur une carte adverse pour l'éliminer.";
-                    } else if(c.animal === 'monkey') {
-                        this.monkeyTargeting = true;
-                        instruction = this.monkeyTarget1 ? "🐒 Cliquez sur la 2ème carte." : "🐒 Cliquez sur une 1ère carte à échanger.";
-                    } else if(c.animal === 'crab') {
-                        this.crabTargeting = true;
-                        instruction = "🦀 Cliquez sur une de VOS cartes (en bas) pour la décaler à droite.";
-                    }
+                    `;
+                }
+                else if(this.state.activeAction === 'power_target') {
+                    document.getElementById('drawn-card').style.display = 'none';
+                    const c = this.state.pendingPower.card;
+                    ui.toast(`Pouvoir ${c.animal} : Sélectionnez une cible sur le plateau !`);
                     
+                    if(c.animal === 'parrot') {
+                        ui.showModal('parrot-modal');
+                        const grid = document.getElementById('parrot-animal-grid');
+                        grid.innerHTML = '';
+                        this.selectedParrotGuess = null;
+                        document.getElementById('parrot-placement-actions').style.display = 'none';
+                        ANIMALS.forEach(a => {
+                            grid.innerHTML += `<div class="parrot-animal-cell" id="parrot-cell-${a.id}" onclick="game.selectParrotAnimal('${a.id}')">
+                                <img src="assets/card_${a.id}.jpg">
+                                <span>${a.name}</span>
+                            </div>`;
+                        });
+                    } else {
+                        let instruction = '';
+                        if(c.animal === 'crocodile') {
+                            this.crocodileTargeting = true;
+                            instruction = "🐊 Cliquez directement sur une carte adverse pour l'éliminer.";
+                        } else if(c.animal === 'monkey') {
+                            this.monkeyTargeting = true;
+                            instruction = this.monkeyTarget1 ? "🐒 Cliquez sur la 2ème carte." : "🐒 Cliquez sur une 1ère carte à échanger.";
+                        } else if(c.animal === 'crab') {
+                            this.crabTargeting = true;
+                            instruction = "🦀 Cliquez sur une de VOS cartes (en bas) pour la décaler à droite.";
+                        }
+                        
+                        actModal.style.display = 'flex';
+                        cActions.style.display = 'flex';
+                        cActions.innerHTML = `
+                            <div style="color:white; font-weight:bold; text-align:center; font-size:1.1rem;">${instruction}</div>
+                            <button class="btn btn-secondary" onclick="game.sendAction('execute_power', {cancel: true})">Passer / Ne pas utiliser</button>
+                        `;
+                    }
+                }
+                else if(this.state.activeAction === 'parrot_give') {
+                    document.getElementById('drawn-card').style.display = 'flex';
+                    this.parrotGiveTargeting = true;
+                    const c = this.state.parrotGiveCard;
+                    document.getElementById('drawn-card-img').src = `assets/card_${c.animal}.jpg`;
                     actModal.style.display = 'flex';
                     cActions.style.display = 'flex';
                     cActions.innerHTML = `
-                        <div style="color:white; font-weight:bold; text-align:center; font-size:1.1rem;">${instruction}</div>
-                        <button class="btn btn-secondary" onclick="game.sendAction('execute_power', {cancel: true})">Passer / Ne pas utiliser</button>
+                        <div style="color:white; font-weight:bold; text-align:center; font-size:1.1rem; line-height:1.4;">
+                            Raté ! 🦜<br><br>
+                            Vous devez donner cette carte.<br>
+                            <b>Cliquez sur l'espace d'un adversaire</b> en haut pour lui donner.
+                        </div>
                     `;
                 }
             }
-            else if(this.state.activeAction === 'parrot_give') {
-                document.getElementById('drawn-card').style.display = 'flex';
-                this.parrotGiveTargeting = true;
-                const c = this.state.parrotGiveCard;
-                document.getElementById('drawn-card-img').src = `assets/card_${c.animal}.jpg`;
-                actModal.style.display = 'flex';
-                cActions.style.display = 'flex';
-                cActions.innerHTML = `
-                    <div style="color:white; font-weight:bold; text-align:center; font-size:1.1rem; line-height:1.4;">
-                        Raté ! 🦜<br><br>
-                        Vous devez donner cette carte.<br>
-                        <b>Cliquez sur l'espace d'un adversaire</b> en haut pour lui donner.
-                    </div>
-                `;
+            
+            if(this.state.pendingPower && this.state.pendingPower.showLove) {
+                ui.showModal('hermit-love-modal');
+            } else {
+                ui.hideModal('hermit-love-modal');
             }
-        }
-        
-        if(this.state.pendingPower && this.state.pendingPower.showLove) {
-            ui.showModal('hermit-love-modal');
+        };
+
+        if (document.startViewTransition) {
+            try {
+                document.startViewTransition(() => updateDOM());
+            } catch(e) {
+                updateDOM();
+            }
         } else {
-            ui.hideModal('hermit-love-modal');
+            updateDOM();
         }
     }
 
-    renderRow(containerId, cards, isMe) {
+    renderRow(containerId, cards, isMe = false) {
         const cont = document.getElementById(containerId);
+        if(!cont) return;
         cont.innerHTML = '';
         cards.forEach((c, index) => {
             let cl = "card";
@@ -1132,10 +1185,10 @@ class GameEngine {
                 if(isMe && pending === 'monkey') cl += ' targetable';
                 if(this.monkeyTarget1 && this.monkeyTarget1.cId === c.id) cl += ' selected-target';
             }
-            if(this.state.status === 'ended' && this.state.winner && this.state.winner.id === (isMe ? this.myId : containerId.split('-')[1])) {
+            if(this.state.status === 'ended' && this.state.winner && this.state.winner.cards.some(wc => wc.id === c.id)) {
                 cl += ' winning-card';
             }
-            cont.innerHTML += `<img src="assets/card_${c.animal}.jpg" class="${cl}" data-cardid="${c.id}" onclick="game.handleCardClick('${isMe ? this.myId : containerId.split('-')[1]}', '${c.id}')">`;
+            cont.innerHTML += `<img src="assets/card_${c.animal}.jpg" class="${cl}" data-cardid="${c.id}" style="view-transition-name: card-${c.id};" onclick="game.handleCardClick('${isMe ? this.myId : containerId.split('-')[1]}', '${c.id}')">`;
         });
     }
 
