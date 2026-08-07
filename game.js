@@ -167,19 +167,11 @@ const ui = {
         
         const isMe = winnerData.id === game.myId;
         
-        if(winnerData.matchWin) {
-            document.getElementById('round-end-title').textContent = isMe ? `🎉 VOUS REMPORTEZ LA PARTIE !` : `❌ ${winnerData.name.toUpperCase()} REMPORTE LA PARTIE !`;
-            document.getElementById('round-end-subtitle').textContent = isMe ? "Champion(ne) de la Jungle Touze !" : "Défaite totale...";
-            if (isMe) {
-                soundEngine.play('win');
-                this.playConfetti();
-            }
-        } else {
-            document.getElementById('round-end-title').textContent = isMe ? `🎉 VOUS GAGNEZ LA MANCHE !` : `❌ ${winnerData.name.toUpperCase()} GAGNE LA MANCHE !`;
-            document.getElementById('round-end-subtitle').textContent = isMe ? winnerData.reason : "Défaite ! " + winnerData.reason;
-            if (isMe) {
-                this.playConfetti();
-            }
+        document.getElementById('round-end-title').textContent = isMe ? `🎉 VOUS REMPORTEZ LA PARTIE !` : `❌ ${winnerData.name.toUpperCase()} REMPORTE LA PARTIE !`;
+        document.getElementById('round-end-subtitle').textContent = isMe ? "Champion(ne) de la Jungle Touze !" : "Défaite ! " + winnerData.reason;
+        if (isMe) {
+            soundEngine.play('win');
+            this.playConfetti();
         }
         
         const cardsDiv = document.getElementById('round-end-cards');
@@ -189,17 +181,10 @@ const ui = {
         });
         
         const scoresDiv = document.getElementById('round-end-scores');
-        scoresDiv.innerHTML = '';
-        game.state.players.forEach(p => {
-            scoresDiv.innerHTML += `<div style="display:flex; justify-content:space-between; margin-bottom:5px; font-size:1.1rem; color:white;"><span>${p.name}</span> <span style="color:var(--gold); font-weight:bold;">👑 ${p.winCount || 0}</span></div>`;
-        });
+        if(scoresDiv) scoresDiv.innerHTML = '';
         
         const rematchBtn = document.getElementById('btn-rematch');
-        if(winnerData.matchWin) {
-            rematchBtn.textContent = '🔄 Nouvelle Partie';
-        } else {
-            rematchBtn.textContent = '🔄 Rejouer une manche';
-        }
+        rematchBtn.textContent = '🔄 Nouvelle Partie';
     },
     
     playConfetti() {
@@ -683,9 +668,6 @@ class GameEngine {
                 break;
                 
             case 'REMATCH':
-                if(this.state.winner && this.state.winner.matchWin) {
-                    this.state.players.forEach(p => p.winCount = 0);
-                }
                 this.state.status = 'setup';
                 this.state.players.forEach(p => p.cards = []);
                 this.state.deckLeft = [];
@@ -911,8 +893,7 @@ class GameEngine {
             
             if(winReason) {
                 this.state.status = 'ended';
-                player.winCount = (player.winCount || 0) + 1;
-                this.state.winner = { id: player.id, name: player.name, reason: winReason, cards: player.cards, matchWin: player.winCount >= 2 };
+                this.state.winner = { id: player.id, name: player.name, reason: winReason, cards: player.cards, matchWin: true };
                 this.broadcastState();
                 return;
             }
@@ -1406,9 +1387,10 @@ class GameEngine {
         const thinkTime = 800 + Math.random() * 800;
         
         const executeBotAction = () => {
-            if(this.state.players[this.state.turnIndex].id !== bot.id) return; // Prevents stale action
-            
-            if(this.state.activeAction === 'draw') {
+            try {
+                if(this.state.players[this.state.turnIndex].id !== bot.id) return; // Prevents stale action
+                
+                if(this.state.activeAction === 'draw') {
                 const dId = Math.random() > 0.5 ? 1 : 2;
                 this.processAction(bot.id, 'draw', { deck: dId });
             } 
@@ -1431,7 +1413,13 @@ class GameEngine {
                 if(opps.length > 0) {
                     const t = opps[Math.floor(Math.random()*opps.length)];
                     this.processAction(bot.id, 'execute_parrot_give', { targetId: t.id });
+                } else {
+                    this.nextTurn();
                 }
+            }
+            } catch(e) {
+                console.error("Bot synchronous action failed:", e);
+                this.processAction(bot.id, 'execute_power', {cancel: true});
             }
         };
 
