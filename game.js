@@ -502,8 +502,14 @@ class GameEngine {
                 this.conn.on('data', (data) => {
                     if(data.type === 'STATE') {
                         this.state = data.state;
-                        if(this.state.status === 'waiting') ui.showScreen('screen-host');
-                        else if(this.state.status === 'playing') ui.showScreen('screen-game');
+                        if(this.state.status === 'waiting') {
+                            ui.showScreen('screen-host');
+                            // Client: hide host-only controls
+                            const hostBar = document.getElementById('host-actions-bar');
+                            if(hostBar) hostBar.style.display = 'none';
+                            document.getElementById('room-code-display').textContent = this.roomCode;
+                        }
+                        else if(this.state.status === 'playing' || this.state.status === 'rolling') ui.showScreen('screen-game');
                         this.renderState();
                     } else if(data.type === 'KICKED') {
                         alert("Vous avez été exclu du salon.");
