@@ -931,25 +931,39 @@ class GameEngine {
                 }
                 const p2 = this.state.players.find(p => p.id === payload.targetPlayerId);
                 if(p2) {
+                    // Find and remove the crocodile from the attacker's hand
+                    let myCrocoIdx = player.cards.findIndex(c => c.id === this.state.pendingPower.card.id);
+                    if (myCrocoIdx === -1) myCrocoIdx = player.cards.findIndex(c => c.animal === 'crocodile');
+                    
+                    let crocodileCard = null;
+                    if (myCrocoIdx !== -1) {
+                        crocodileCard = player.cards.splice(myCrocoIdx, 1)[0];
+                    }
+                    
                     const c2 = p2.cards.find(c => c.id === payload.cardId);
                     p2.cards = p2.cards.filter(c => c.id !== payload.cardId);
                     ui.logHistory(player.name, `a éliminé le ${c2.animal} de ${p2.name}`, 'crocodile');
                     
+                    // Les 2 cartes vont sous la pioche
+                    if (c2 && this.state.deckLeft) this.state.deckLeft.push(c2);
+                    if (crocodileCard && this.state.deckRight) this.state.deckRight.push(crocodileCard);
+                    
                     this.state.lastAnimation = {
                         id: Date.now(),
                         type: 'crocodile_attack',
-                        attackerId: player.id,
+                        playerId: player.id,
                         targetId: p2.id,
-                        targetCardAnimal: c2.animal,
-                        targetCardId: c2.id
+                        targetCardAnimal: c2.animal
                     };
 
                     if (player.id !== this.myId) {
+                        const animalNames = { lion: 'Lion', chameleon: 'Caméléon', octopus: 'Pieuvre', crocodile: 'Crocodile', monkey: 'Singe', crab: 'Crabe', parrot: 'Perroquet', hermit_crab: "Bernard l'Hermite" };
                         const anName = animalNames[c2.animal] || c2.animal;
                         ui.toast(`🐊 ${player.name} élimine le ${anName} de ${p2.name} !`);
                     }
+                    
+                    this.nextTurn();
                 }
-                this.nextTurn();
                 break;
 
             case 'monkey':
