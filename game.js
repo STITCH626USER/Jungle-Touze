@@ -1055,17 +1055,20 @@ class GameEngine {
             const actModal = document.getElementById('action-modal');
             const cActions = document.getElementById('card-actions');
             const pActions = document.getElementById('placement-actions');
+            const drawnCardImg = document.getElementById('drawn-card-img');
             
             actModal.style.display = 'none';
             cActions.style.display = 'none';
             pActions.style.display = 'none';
+            drawnCardImg.style.viewTransitionName = '';
             
             if (activePlayer && !isMyTurn && this.state.status === 'playing') {
                 if (this.state.activeAction === 'place_or_reject' || this.state.activeAction === 'power_target') {
                     if(this.state.pendingPower && this.state.pendingPower.card) {
                         actModal.style.display = 'flex';
                         const c = this.state.pendingPower.card;
-                        document.getElementById('drawn-card-img').src = `assets/card_${c.animal}.jpg`;
+                        drawnCardImg.src = `assets/card_${c.animal}.jpg`;
+                        drawnCardImg.style.viewTransitionName = `card-${c.id}`;
                         cActions.style.display = 'flex';
                         cActions.innerHTML = `<p style="color:var(--secondary);text-align:center;font-weight:900;margin:0;font-size:1.2rem;">${activePlayer.name} réfléchit...</p>`;
                     }
@@ -1083,7 +1086,8 @@ class GameEngine {
                     actModal.style.display = 'flex';
                     pActions.style.display = 'flex';
                     const c = this.state.pendingPower.card;
-                    document.getElementById('drawn-card-img').src = `assets/card_${c.animal}.jpg`;
+                    drawnCardImg.src = `assets/card_${c.animal}.jpg`;
+                    drawnCardImg.style.viewTransitionName = `card-${c.id}`;
                     this.isPlacingCard = true;
                     pActions.innerHTML = `
                         <div style="display:flex; flex-direction:column; gap:8px; width:100%;">
@@ -1141,7 +1145,8 @@ class GameEngine {
                     document.getElementById('drawn-card').style.display = 'flex';
                     this.parrotGiveTargeting = true;
                     const c = this.state.parrotGiveCard;
-                    document.getElementById('drawn-card-img').src = `assets/card_${c.animal}.jpg`;
+                    drawnCardImg.src = `assets/card_${c.animal}.jpg`;
+                    drawnCardImg.style.viewTransitionName = `card-${c.id}`;
                     actModal.style.display = 'flex';
                     cActions.style.display = 'flex';
                     cActions.innerHTML = `
