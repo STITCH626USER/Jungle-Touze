@@ -165,14 +165,21 @@ const ui = {
         document.getElementById('round-end-modal').style.justifyContent = 'center';
         document.getElementById('round-end-modal').style.textAlign = 'center';
         
+        const isMe = winnerData.id === game.myId;
+        
         if(winnerData.matchWin) {
-            document.getElementById('round-end-title').textContent = `🎉 ${winnerData.name.toUpperCase()} REMPORTE LA PARTIE !`;
-            document.getElementById('round-end-subtitle').textContent = "Champion(ne) de la Jungle Touze !";
-            soundEngine.play('win');
-            this.playConfetti();
+            document.getElementById('round-end-title').textContent = isMe ? `🎉 VOUS REMPORTEZ LA PARTIE !` : `❌ ${winnerData.name.toUpperCase()} REMPORTE LA PARTIE !`;
+            document.getElementById('round-end-subtitle').textContent = isMe ? "Champion(ne) de la Jungle Touze !" : "Défaite totale...";
+            if (isMe) {
+                soundEngine.play('win');
+                this.playConfetti();
+            }
         } else {
-            document.getElementById('round-end-title').textContent = `${winnerData.name.toUpperCase()} GAGNE LA MANCHE !`;
-            document.getElementById('round-end-subtitle').textContent = winnerData.reason;
+            document.getElementById('round-end-title').textContent = isMe ? `🎉 VOUS GAGNEZ LA MANCHE !` : `❌ ${winnerData.name.toUpperCase()} GAGNE LA MANCHE !`;
+            document.getElementById('round-end-subtitle').textContent = isMe ? winnerData.reason : "Défaite ! " + winnerData.reason;
+            if (isMe) {
+                this.playConfetti();
+            }
         }
         
         const cardsDiv = document.getElementById('round-end-cards');
