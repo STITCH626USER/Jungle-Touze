@@ -39,7 +39,7 @@
                 <button class="btn btn-main" onclick="game.hostRoom()">Créer un Salon</button>
                 <button class="btn btn-secondary" onclick="ui.showScreen('screen-join')">Rejoindre</button>
                 <button id="btn-install-app" class="btn" style="display:none; background:linear-gradient(135deg,#1e90ff,#3742fa);" onclick="ui.installPWA()">Installer l'application</button>
-                <button class="btn btn-rules" onclick="ui.showHelpModal()">Règles du Jeu <span class="version-pill">v2.4</span></button>
+                <button class="btn btn-rules" onclick="ui.showHelpModal()">Règles du Jeu <span class="version-pill">v2.5</span></button>
             </div>
         </div>
 
@@ -56,7 +56,7 @@
                 <h3>Joueurs (<span id="player-count">1</span>/5)</h3>
                 <ul id="waiting-players-list"></ul>
             </div>
-            <div class="host-actions">
+            <div class="host-actions" id="host-actions-bar">
                 <button class="btn btn-secondary" onclick="game.addBot()">+ Ajouter un Bot</button>
                 <button class="btn btn-main pulse" onclick="game.startGame()" id="btn-start-game">▶️ Démarrer la Partie</button>
             </div>

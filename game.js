@@ -469,6 +469,8 @@ class GameEngine {
                 });
             });
             ui.showScreen('screen-host');
+            const hostBar = document.getElementById('host-actions-bar');
+            if (hostBar) hostBar.style.display = 'flex';
         } catch(e) {
             console.error("PeerJS error:", e);
             alert("Erreur de connexion au serveur multijoueur. Vérifiez votre connexion.");
