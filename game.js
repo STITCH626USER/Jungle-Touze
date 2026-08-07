@@ -1281,6 +1281,10 @@ class GameEngine {
     // --- RENDER STATE TO DOM ---
     renderState() {
         if (!this.state || !this.state.players) return;
+
+        // Compute at renderState scope so both updateDOM and the flag setter can use it
+        const activePlayer = this.state.players[this.state.turnIndex];
+        const isMyTurn = activePlayer && activePlayer.id === this.myId;
         
         const updateDOM = () => {
             // Sync history from state (important for clients who don't run processAction)
@@ -1327,11 +1331,9 @@ class GameEngine {
             }
             
             const myData = this.state.players.find(p => p.id === this.myId);
-            if(!myData) return; // Spectator or not yet joined fully
+            if(!myData) return;
             
-            const activePlayer = this.state.players[this.state.turnIndex];
-            const isMyTurn = activePlayer && activePlayer.id === this.myId;
-            
+            // isMyTurn already declared at renderState scope
             document.getElementById('my-score').textContent = myData.score;
             this.renderRow('my-row', myData.cards, true);
             
@@ -1346,7 +1348,8 @@ class GameEngine {
                     let cl = "card";
                     if(isMyTurn && this.state.activeAction === 'power_target') {
                         const pending = this.state.pendingPower.card.animal;
-                        if(pending === 'crocodile' || pending === 'monkey' || pending === 'crab') cl += ' targetable';
+                        // Crocodile and monkey target OPPONENT cards; crab targets OWN cards (not here)
+                        if(pending === 'crocodile' || pending === 'monkey') cl += ' targetable';
                     }
                     if(this.state.status === 'ended' && this.state.winner && this.state.winner.id === p.id) {
                         cl += ' winning-card';
@@ -1554,6 +1557,15 @@ class GameEngine {
             }
         };
 
+        // Set targeting flags BEFORE the viewTransition (synchronously)
+        // This ensures handleCardClick sees the correct flag even if the transition is async
+        if(isMyTurn && this.state.activeAction === 'power_target' && this.state.pendingPower) {
+            const animal = this.state.pendingPower.card.animal;
+            if(animal === 'crocodile') this.crocodileTargeting = true;
+            else if(animal === 'monkey') this.monkeyTargeting = true;
+            else if(animal === 'crab') this.crabTargeting = true;
+        }
+
         if (!document.startViewTransition) {
             updateDOM();
             return;
@@ -1581,8 +1593,8 @@ class GameEngine {
             
             if(this.state.activeAction === 'power_target' && isMyTurn) {
                 const pending = this.state.pendingPower.card.animal;
-                if(isMe && pending === 'crab') cl += ' targetable';
-                if(!isMe && (pending === 'crocodile' || pending === 'monkey')) cl += ' targetable';
+                if(isMe && (pending === 'crab')) cl += ' targetable'; // crab = own cards
+                if(!isMe && (pending === 'crocodile' || pending === 'monkey')) cl += ' targetable'; // croc/monkey = opponent cards
                 if(this.crabTargetCard && this.crabTargetCard.cId === c.id) cl += ' selected-target';
             }
             if(this.state.status === 'ended' && this.state.winner && this.state.winner.cards.some(wc => wc.id === c.id)) {
