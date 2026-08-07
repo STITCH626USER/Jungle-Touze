@@ -1208,25 +1208,40 @@ class GameEngine {
     checkWinConditions() {
         for(const player of this.state.players) {
             let winReason = null;
-            
-            // 1. Lion (8 uniques)
-            const uniques = new Set(player.cards.map(c => c.animal));
-            if(uniques.size >= 8) winReason = "Lion (8 uniques)";
-            
-            // 2. Octopus (3 paires) — REQUIERT une carte Pieuvre en main
-            const hasOctopus = player.cards.some(c => c.animal === 'octopus');
-            const counts = {};
-            player.cards.forEach(c => { counts[c.animal] = (counts[c.animal] || 0) + 1; });
-            let pairs = 0;
-            for(const a in counts) {
-                if(counts[a] >= 2 && a !== 'chameleon') pairs++;
+            const cards = player.cards;
+            if(cards.length === 0) continue;
+
+            const chameleonCount = cards.filter(c => c.animal === 'chameleon').length;
+            const nonChameleon = cards.filter(c => c.animal !== 'chameleon');
+
+            // 1. Lion (8 animaux différents — caméléon compte comme joker)
+            const uniqueAnimals = new Set(nonChameleon.map(c => c.animal));
+            const effectiveUniques = uniqueAnimals.size + Math.min(chameleonCount, 8 - uniqueAnimals.size);
+            if(effectiveUniques >= 8) winReason = "Lion (8 uniques)";
+
+            // 2. Pieuvre (3 paires — caméléon joker complète une paire incomplète)
+            if(!winReason) {
+                const hasOctopus = cards.some(c => c.animal === 'octopus');
+                if(hasOctopus) {
+                    const counts = {};
+                    nonChameleon.forEach(c => { counts[c.animal] = (counts[c.animal] || 0) + 1; });
+                    let realPairs = 0;
+                    let singles = 0;
+                    for(const a in counts) {
+                        if(counts[a] >= 2) realPairs++;
+                        else singles++;
+                    }
+                    // Each chameleon can pair with a single card
+                    const chameleonPairs = Math.min(chameleonCount, singles);
+                    const totalPairs = realPairs + chameleonPairs;
+                    if(totalPairs >= 3) winReason = "Pieuvre (3 paires)";
+                }
             }
-            if(hasOctopus && pairs >= 3) winReason = "Pieuvre (3 paires)";
-            
-            // 3. Standard (4 in a row, chameleon acts as wildcard)
-            if(!winReason && player.cards.length >= 4) {
-                for(let i=0; i<=player.cards.length - 4; i++) {
-                    const slice = player.cards.slice(i, i+4);
+
+            // 3. Standard (4 alignés — caméléon joker)
+            if(!winReason && cards.length >= 4) {
+                for(let i = 0; i <= cards.length - 4; i++) {
+                    const slice = cards.slice(i, i + 4);
                     const baseAnimals = new Set(slice.map(c => c.animal).filter(a => a !== 'chameleon'));
                     if(baseAnimals.size <= 1) {
                         winReason = "4 alignés !";
@@ -1234,7 +1249,7 @@ class GameEngine {
                     }
                 }
             }
-            
+
             if(winReason) {
                 this.state.status = 'ended';
                 this.state.winner = { id: player.id, name: player.name, reason: winReason, cards: player.cards, matchWin: true };
