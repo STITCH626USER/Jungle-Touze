@@ -1003,8 +1003,9 @@ class GameEngine {
                     let cl = "card";
                     if(this.state.activeAction === 'power_target') {
                         const pending = this.state.pendingPower.card.animal;
-                        if(pending === 'crocodile' || pending === 'monkey') cl += ' targetable';
+                        if(pending === 'crocodile' || pending === 'monkey' || pending === 'crab') cl += ' targetable';
                         if(this.monkeyTarget1 && this.monkeyTarget1.cId === c.id) cl += ' selected-target';
+                        if(this.crabTargetCard && this.crabTargetCard.cId === c.id) cl += ' selected-target';
                     }
                     if(this.state.status === 'ended' && this.state.winner && this.state.winner.id === p.id) {
                         cl += ' winning-card';
@@ -1022,7 +1023,7 @@ class GameEngine {
                 oppList.innerHTML += `<div class="opponent-slot ${slotClass}" data-id="${p.id}" ${clickHandler}>
                     <div class="opp-header">
                         <div class="opp-name">${p.isBot?'🤖':''} ${p.name}</div>
-                        <div class="opp-score">🏆 ${p.cards.length}/8</div>
+                        <div class="score-badge" style="display:none;"></div>
                     </div>
                     <div class="opp-cards-mini">${cardsHtml}</div>
                 </div>`;
@@ -1164,15 +1165,28 @@ class GameEngine {
                             instruction = this.monkeyTarget1 ? "🐒 Cliquez sur la 2ème carte." : "🐒 Cliquez sur une 1ère carte à échanger.";
                         } else if(c.animal === 'crab') {
                             this.crabTargeting = true;
-                            instruction = "🦀 Cliquez sur une de VOS cartes (en bas) pour la décaler à droite.";
+                            if (this.crabTargetCard) {
+                                instruction = "🦀 Vers où décaler cette carte ?";
+                            } else {
+                                instruction = "🦀 Cliquez sur une carte à décaler.";
+                            }
                         }
                         
                         actModal.style.display = 'flex';
                         cActions.style.display = 'flex';
-                        cActions.innerHTML = `
-                            <div style="color:white; font-weight:bold; text-align:center; font-size:1.1rem;">${instruction}</div>
-                            <button class="btn-skip-power" onclick="game.sendAction('execute_power', {cancel: true})">Passer le pouvoir</button>
-                        `;
+                        let actionsHtml = `<div style="color:white; font-weight:bold; text-align:center; font-size:1.1rem;">${instruction}</div>`;
+                        if (c.animal === 'crab' && this.crabTargetCard) {
+                            actionsHtml += `
+                                <div style="display:flex; gap:10px; margin-top:15px; width:100%;">
+                                    <button class="btn-action-place" onclick="game.confirmCrabMove('left')">⬅ GAUCHE</button>
+                                    <button class="btn-action-place" onclick="game.confirmCrabMove('right')">DROITE ➡</button>
+                                </div>
+                                <button class="btn-skip-power" style="margin-top:15px;" onclick="game.cancelCrabTarget()">Annuler la sélection</button>
+                            `;
+                        } else {
+                            actionsHtml += `<button class="btn-skip-power" onclick="game.sendAction('execute_power', {cancel: true})">Passer le pouvoir</button>`;
+                        }
+                        cActions.innerHTML = actionsHtml;
                     }
                 }
                 else if(this.state.activeAction === 'parrot_give') {
@@ -1227,6 +1241,7 @@ class GameEngine {
                 if(!isMe && (pending === 'crocodile' || pending === 'monkey')) cl += ' targetable';
                 if(isMe && pending === 'monkey') cl += ' targetable';
                 if(this.monkeyTarget1 && this.monkeyTarget1.cId === c.id) cl += ' selected-target';
+                if(this.crabTargetCard && this.crabTargetCard.cId === c.id) cl += ' selected-target';
             }
             if(this.state.status === 'ended' && this.state.winner && this.state.winner.cards.some(wc => wc.id === c.id)) {
                 cl += ' winning-card';
@@ -1262,12 +1277,13 @@ class GameEngine {
                 this.sendAction('execute_power', { target1, target2 });
             }
         } else if(this.crabTargeting) {
-            if(playerId !== this.myId) return; // Must target own row
-            const p = this.state.players.find(x => x.id === this.myId);
+            const p = this.state.players.find(x => x.id === playerId);
+            if(!p) return;
             const idx = p.cards.findIndex(c => c.id === cardId);
             if(idx !== -1) {
-                this.crabTargeting = false;
-                this.sendAction('execute_power', { targetRowPlayerId: this.myId, fromIndex: idx, toIndex: p.cards.length - 1 });
+                this.crabTargetCard = { pId: playerId, idx: idx, cId: cardId };
+                ui.toast("🦀 Choisissez la direction");
+                this.renderState();
             }
         } else {
             // OUBLI 13 - Card Admire
@@ -1310,6 +1326,29 @@ class GameEngine {
         }
     }
     
+    cancelCrabTarget() {
+        this.crabTargetCard = null;
+        this.renderState();
+    }
+    
+    confirmCrabMove(dir) {
+        if(!this.crabTargetCard) return;
+        const target = this.crabTargetCard;
+        const p = this.state.players.find(x => x.id === target.pId);
+        if(!p) return;
+        
+        let toIndex = target.idx;
+        if(dir === 'left') {
+            toIndex = Math.max(0, target.idx - 1);
+        } else {
+            toIndex = Math.min(p.cards.length - 1, target.idx + 1);
+        }
+        
+        this.crabTargeting = false;
+        this.crabTargetCard = null;
+        this.sendAction('execute_power', { targetRowPlayerId: p.id, fromIndex: target.idx, toIndex: toIndex });
+    }
+
     handleOpponentClick(playerId) {
         if(this.crocodileTargeting || this.monkeyTargeting || this.crabTargeting) return;
         ui.showModal('card-admire-modal');
@@ -1363,6 +1402,7 @@ class GameEngine {
 
     playBotTurn(bot) {
         if(this.botLivenessTimer) clearTimeout(this.botLivenessTimer);
+        if(this.botFallbackTimer) clearTimeout(this.botFallbackTimer);
         const thinkTime = 800 + Math.random() * 800;
         
         const executeBotAction = () => {
@@ -1398,7 +1438,7 @@ class GameEngine {
         this.botLivenessTimer = setTimeout(executeBotAction, thinkTime);
         
         // Guard against stuck bots
-        setTimeout(() => {
+        this.botFallbackTimer = setTimeout(() => {
             if(this.state.status === 'playing' && this.state.players[this.state.turnIndex].id === bot.id) {
                 try {
                     executeBotAction();
