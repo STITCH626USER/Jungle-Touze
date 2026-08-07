@@ -1171,7 +1171,7 @@ class GameEngine {
                         cActions.style.display = 'flex';
                         cActions.innerHTML = `
                             <div style="color:white; font-weight:bold; text-align:center; font-size:1.1rem;">${instruction}</div>
-                            <button class="btn btn-secondary" onclick="game.sendAction('execute_power', {cancel: true})">Passer / Ne pas utiliser</button>
+                            <button class="btn-skip-power" onclick="game.sendAction('execute_power', {cancel: true})">Passer le pouvoir</button>
                         `;
                     }
                 }
