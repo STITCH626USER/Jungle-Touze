@@ -938,11 +938,15 @@ class GameEngine {
                 }
                 const p2M = this.state.players.find(p => p.id === payload.targetPlayerId);
                 if(p2M) {
-                    const myMonkeyIdx = player.cards.findIndex(c => c.id === this.state.pendingPower.card.id);
+                    let myMonkeyIdx = player.cards.findIndex(c => c.id === this.state.pendingPower.card.id);
+                    if (myMonkeyIdx === -1) {
+                        myMonkeyIdx = player.cards.findIndex(c => c.animal === 'monkey');
+                    }
                     if (myMonkeyIdx === -1) { this.nextTurn(); return; }
                     
                     const monkeyCard = player.cards.splice(myMonkeyIdx, 1)[0];
-                    const targetIdx = p2M.cards.findIndex(c => c.id === payload.cardId);
+                    let targetIdx = p2M.cards.findIndex(c => c.id === payload.cardId);
+                    if (targetIdx === -1 && p2M.cards.length > 0) targetIdx = 0;
                     if (targetIdx === -1) { player.cards.push(monkeyCard); this.nextTurn(); return; }
                     
                     const stolenCard = p2M.cards[targetIdx];
