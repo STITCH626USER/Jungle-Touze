@@ -640,6 +640,8 @@ class GameEngine {
             this.broadcastState();
             this.updateLobbyUI();
         } else if (data.type === 'ACTION') {
+            const activePlayer = this.state.players[this.state.turnIndex];
+            console.log(`[HOST] ACTION '${data.action}' from ${data.id}. ActivePlayer: ${activePlayer ? activePlayer.id : 'NONE'}. Match: ${activePlayer ? (activePlayer.id === data.id) : false}`);
             this.processAction(data.id, data.action, data.payload);
         }
     }
@@ -676,6 +678,7 @@ class GameEngine {
         if(this.isHost) {
             this.processAction(this.myId, action, payload);
         } else {
+            console.log(`[CLIENT] sendAction '${action}' myId=${this.myId}`, payload);
             this.conn.send({ type: 'ACTION', id: this.myId, action, payload });
         }
     }
@@ -896,7 +899,10 @@ class GameEngine {
     // --- ACTION PROCESSING (Host Only) ---
     processAction(playerId, action, payload) {
         const activePlayer = this.state.players[this.state.turnIndex];
-        if (activePlayer.id !== playerId && !['quit'].includes(action)) return;
+        if (activePlayer.id !== playerId && !['quit'].includes(action)) {
+            console.warn(`[processAction] BLOCKED: '${action}' from '${playerId}'. Expected '${activePlayer ? activePlayer.id : 'NONE'}'`);
+            return;
+        }
 
         switch(action) {
             case 'quit':
@@ -1363,6 +1369,9 @@ class GameEngine {
         const isMyTurn = activePlayer && activePlayer.id === this.myId;
         
         const updateDOM = () => {
+            if(!this.isHost) {
+                console.log(`[CLIENT renderState] action=${this.state.activeAction} myId=${this.myId} activePlayerId=${activePlayer ? activePlayer.id : 'NONE'} isMyTurn=${isMyTurn}`);
+            }
             // Sync history from state (important for clients who don't run processAction)
             if(this.state.history && this.state.history.length > 0 && !this.isHost) {
                 const h = document.getElementById('history-list');
