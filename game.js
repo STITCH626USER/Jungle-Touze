@@ -538,10 +538,13 @@ class GameEngine {
                             }
                         }
                         else if(this.state.status === 'playing') {
-                            ui.showScreen('screen-game');
-                            ui.hideModal('dice-modal'); // Close dice modal when game starts
-                            if(this.state.players[this.state.turnIndex]) {
-                                ui.toast(`C'est parti ! ${this.state.players[this.state.turnIndex].name} commence !`);
+                            // Only trigger screen switch + toast on the FIRST time we see 'playing'
+                            if(document.getElementById('screen-game') && !document.getElementById('screen-game').classList.contains('active')) {
+                                ui.showScreen('screen-game');
+                                ui.hideModal('dice-modal');
+                                if(this.state.players[this.state.turnIndex]) {
+                                    ui.toast(`C'est parti ! ${this.state.players[this.state.turnIndex].name} commence !`);
+                                }
                             }
                         }
                         this.renderState();
@@ -1369,6 +1372,12 @@ class GameEngine {
         const isMyTurn = activePlayer && activePlayer.id === this.myId;
         
         const updateDOM = () => {
+            // Animal names used across multiple blocks
+            const animalNames = {
+                lion: 'Lion', chameleon: 'Caméléon', octopus: 'Pieuvre',
+                crocodile: 'Crocodile', monkey: 'Singe', crab: 'Crabe',
+                parrot: 'Perroquet', hermit_crab: "Bernard l'Hermite"
+            };
             if(!this.isHost) {
                 console.log(`[CLIENT renderState] action=${this.state.activeAction} myId=${this.myId} activePlayerId=${activePlayer ? activePlayer.id : 'NONE'} isMyTurn=${isMyTurn}`);
             }
@@ -1587,17 +1596,22 @@ class GameEngine {
                     ui.toast(`Pouvoir ${c.animal} : Sélectionnez une cible sur le plateau !`);
                     
                     if(c.animal === 'parrot') {
-                        ui.showModal('parrot-modal');
-                        const grid = document.getElementById('parrot-animal-grid');
-                        grid.innerHTML = '';
-                        this.selectedParrotGuess = null;
-                        document.getElementById('parrot-placement-actions').style.display = 'none';
-                        ANIMALS.forEach(a => {
-                            grid.innerHTML += `<div class="parrot-animal-cell" id="parrot-cell-${a.id}" onclick="game.selectParrotAnimal('${a.id}')">
-                                <img src="assets/card_${a.id}.jpg">
-                                <span>${a.name}</span>
-                            </div>`;
-                        });
+                        // Only (re)initialize the modal if it's not already showing,
+                        // so we don't reset the player's animal selection mid-guess
+                        const parrotModal = document.getElementById('parrot-modal');
+                        if(parrotModal.style.display !== 'flex') {
+                            ui.showModal('parrot-modal');
+                            const grid = document.getElementById('parrot-animal-grid');
+                            grid.innerHTML = '';
+                            this.selectedParrotGuess = null;
+                            document.getElementById('parrot-placement-actions').style.display = 'none';
+                            ANIMALS.forEach(a => {
+                                grid.innerHTML += `<div class="parrot-animal-cell" id="parrot-cell-${a.id}" onclick="game.selectParrotAnimal('${a.id}')">
+                                    <img src="assets/card_${a.id}.jpg">
+                                    <span>${a.name}</span>
+                                </div>`;
+                            });
+                        }
                     } else {
                         let instruction = '';
                         if(c.animal === 'crocodile') {
