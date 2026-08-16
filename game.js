@@ -1590,14 +1590,14 @@ class GameEngine {
                     const isForced = this.state.pendingPower.forced
                                   || this.state.pendingPower.monkeySuccess
                                   || this.state.pendingPower.parrotSuccess;
-                    const rejectBtnHtml = isForced ? '' : `<button class="btn-action-reject" style="width:100%; border-radius:16px; padding:12px;" onclick="game.sendAction('reject')">❌ Jeter la carte</button>`;
+                    const rejectBtnHtml = isForced ? '' : `<button class="btn-action-reject" style="width:100%; border-radius:20px; padding:16px; font-size:1.1rem;" onclick="game.sendAction('reject')">❌ Jeter la carte</button>`;
                     
                     pActions.innerHTML = `
-                        <div style="display:flex; flex-direction:column; gap:8px; width:100%;">
+                        <div style="display:flex; flex-direction:column; gap:12px; width:100%;">
                             ${titleHtml}
-                            <div style="display:flex; gap:8px;">
-                                <button class="btn-action-place" style="flex:1; padding:12px 5px; border-radius:16px;" onclick="game.sendAction('place_card', {side:'left'})">⬅ Gauche</button>
-                                <button class="btn-action-place" style="flex:1; padding:12px 5px; border-radius:16px;" onclick="game.sendAction('place_card', {side:'right'})">Droite ➡</button>
+                            <div style="display:flex; gap:12px;">
+                                <button class="btn-action-place" style="flex:1; padding:16px 10px; border-radius:20px; font-size:1.1rem;" onclick="game.sendAction('place_card', {side:'left'})">⬅ Gauche</button>
+                                <button class="btn-action-place" style="flex:1; padding:16px 10px; border-radius:20px; font-size:1.1rem;" onclick="game.sendAction('place_card', {side:'right'})">Droite ➡</button>
                             </div>
                             ${rejectBtnHtml}
                         </div>
