@@ -111,105 +111,136 @@ const ui = {
         overlay.style.inset = '0';
         overlay.style.zIndex = '999999';
         overlay.style.pointerEvents = 'none';
-        overlay.style.display = 'flex';
-        overlay.style.alignItems = 'center';
-        overlay.style.justifyContent = 'center';
-        overlay.style.backgroundColor = 'rgba(0,0,0,0.85)';
         overlay.style.transition = 'opacity 0.3s';
         document.body.appendChild(overlay);
 
         const isAttackerMe = anim.attackerId === game.myId;
         const isTargetMe = anim.targetId === game.myId;
         
-        let startY = '-100vh';
-        if(isAttackerMe) startY = '100vh';
+        // 1. Locate the exact victim card or victim area on screen
+        let targetX = window.innerWidth / 2;
+        let targetY = window.innerHeight / 3;
 
-        let targetY = '0px';
-        if (isTargetMe) targetY = '20vh'; 
-        else if (isAttackerMe) targetY = '-20vh';
+        if (isTargetMe) {
+            // Target is local player
+            const myRow = document.getElementById('my-row');
+            if (myRow) {
+                const rect = myRow.getBoundingClientRect();
+                targetX = rect.left + rect.width / 2;
+                targetY = rect.top + rect.height / 2;
+            }
+        } else {
+            // Target is an opponent slot
+            const targetSlot = document.querySelector(`.opponent-slot[data-id="${anim.targetId}"]`);
+            if (targetSlot) {
+                const rect = targetSlot.getBoundingClientRect();
+                targetX = rect.left + rect.width / 2;
+                targetY = rect.top + rect.height / 2;
+            }
+        }
 
+        // Start position for the crocodile
+        let startX = isAttackerMe ? window.innerWidth / 2 : (targetX < window.innerWidth / 2 ? window.innerWidth * 0.8 : window.innerWidth * 0.2);
+        let startY = isAttackerMe ? window.innerHeight + 100 : -120;
+
+        // Visual target card popping at the victim's location
         const targetCard = document.createElement('div');
-        targetCard.style.width = '140px';
-        targetCard.style.height = '210px';
+        targetCard.style.width = '100px';
+        targetCard.style.height = '150px';
         targetCard.style.backgroundImage = `url(assets/card_${anim.targetCardAnimal}.jpg)`;
         targetCard.style.backgroundSize = 'contain';
         targetCard.style.backgroundPosition = 'center';
         targetCard.style.backgroundRepeat = 'no-repeat';
         targetCard.style.backgroundColor = 'white';
         targetCard.style.borderRadius = '12px';
-        targetCard.style.border = '4px solid white';
-        targetCard.style.boxShadow = '0 10px 30px rgba(0,0,0,0.8), 0 0 40px rgba(255,0,0,0.4)';
+        targetCard.style.border = '3px solid #ff4757';
+        targetCard.style.boxShadow = '0 10px 30px rgba(0,0,0,0.8), 0 0 30px rgba(255,71,87,0.7)';
         targetCard.style.position = 'absolute';
-        targetCard.style.top = `calc(50% + ${targetY})`;
-        targetCard.style.left = '50%';
-        targetCard.style.transform = 'translate(-50%, -50%) scale(1)';
-        targetCard.style.transition = 'all 0.4s ease-out';
+        targetCard.style.top = `${targetY}px`;
+        targetCard.style.left = `${targetX}px`;
+        targetCard.style.transform = 'translate(-50%, -50%) scale(0.3)';
+        targetCard.style.opacity = '0';
+        targetCard.style.transition = 'all 0.35s cubic-bezier(0.34, 1.56, 0.64, 1)';
         overlay.appendChild(targetCard);
 
+        // Crocodile wrapper leaping from attacker to victim card
         const crocoWrapper = document.createElement('div');
         crocoWrapper.style.position = 'absolute';
-        crocoWrapper.style.top = `calc(50% + ${targetY})`;
-        crocoWrapper.style.left = '50%';
-        crocoWrapper.style.transform = `translate(-50%, calc(-50% + ${startY})) scale(0.5) rotate(${isAttackerMe ? '-20deg' : '20deg'})`;
-        crocoWrapper.style.transition = 'all 0.4s cubic-bezier(0.34, 1.56, 0.64, 1)';
-        crocoWrapper.style.filter = 'drop-shadow(0 20px 40px rgba(0,0,0,0.9)) drop-shadow(0 0 30px rgba(46,204,113,0.6))';
+        crocoWrapper.style.top = `${startY}px`;
+        crocoWrapper.style.left = `${startX}px`;
+        crocoWrapper.style.transform = `translate(-50%, -50%) scale(0.4) rotate(${isAttackerMe ? '-25deg' : '25deg'})`;
+        crocoWrapper.style.transition = 'all 0.5s cubic-bezier(0.2, 0.9, 0.3, 1.2)';
+        crocoWrapper.style.filter = 'drop-shadow(0 15px 35px rgba(0,0,0,0.9)) drop-shadow(0 0 25px rgba(46,204,113,0.8))';
 
         const crocoHead = document.createElement('div');
-        crocoHead.style.width = '240px';
-        crocoHead.style.height = '240px';
+        crocoHead.style.width = '180px';
+        crocoHead.style.height = '180px';
         crocoHead.style.backgroundImage = `url(assets/card_crocodile.jpg)`;
-        crocoHead.style.backgroundSize = '360px 540px';
+        crocoHead.style.backgroundSize = '280px 420px';
         crocoHead.style.backgroundPosition = 'center 35%';
         crocoHead.style.backgroundRepeat = 'no-repeat';
         crocoHead.style.clipPath = 'circle(42% at 50% 50%)';
         crocoWrapper.appendChild(crocoHead);
         overlay.appendChild(crocoWrapper);
 
+        // Banner
         const title = document.createElement('div');
         title.style.position = 'absolute';
-        title.style.top = '15%';
+        title.style.top = '12%';
         title.style.left = '50%';
         title.style.transform = 'translateX(-50%)';
         title.style.color = '#ff4757';
-        title.style.fontSize = 'clamp(1.5rem, 5vw, 2.5rem)';
+        title.style.fontSize = 'clamp(1.2rem, 4.5vw, 2rem)';
         title.style.fontWeight = '900';
-        title.style.textShadow = '0 0 20px rgba(255,71,87,0.8)';
+        title.style.textShadow = '0 0 20px rgba(255,71,87,0.9), 0 0 40px rgba(0,0,0,0.8)';
         title.style.textAlign = 'center';
         title.style.opacity = '0';
-        title.style.transition = 'opacity 0.4s';
-        title.innerHTML = isAttackerMe ? "VOUS ATTAQUEZ ! 🐊" : "ATTAQUE CROCODILE ! 🐊";
+        title.style.transition = 'opacity 0.3s';
+        title.style.background = 'rgba(10, 6, 20, 0.85)';
+        title.style.padding = '8px 24px';
+        title.style.borderRadius = '30px';
+        title.style.border = '1.5px solid rgba(255, 71, 87, 0.5)';
+        title.innerHTML = isAttackerMe ? "🐊 CROCODILE EN CHASSE !" : "🐊 ATTAQUE CROCODILE !";
         overlay.appendChild(title);
 
         setTimeout(() => {
             title.style.opacity = '1';
-            crocoWrapper.style.transform = `translate(-50%, -50%) scale(1.4) rotate(0deg)`;
+            targetCard.style.opacity = '1';
+            targetCard.style.transform = 'translate(-50%, -50%) scale(1.15)';
             
+            // Croco jumps right onto the victim's card
+            crocoWrapper.style.top = `${targetY}px`;
+            crocoWrapper.style.left = `${targetX}px`;
+            crocoWrapper.style.transform = `translate(-50%, -50%) scale(1.2) rotate(0deg)`;
+
             setTimeout(() => {
+                // Bite chomp animation
                 const biteAnim = [
-                    { transform: 'translate(-50%, -50%) scale(1.4) rotate(-15deg)' },
-                    { transform: 'translate(-50%, -50%) scale(1.6) rotate(15deg)' },
-                    { transform: 'translate(-50%, -50%) scale(1.4) rotate(-15deg)' },
-                    { transform: 'translate(-50%, -50%) scale(1.6) rotate(15deg)' },
-                    { transform: 'translate(-50%, -50%) scale(1.4) rotate(0deg)' }
+                    { transform: 'translate(-50%, -50%) scale(1.2) rotate(-15deg)' },
+                    { transform: 'translate(-50%, -50%) scale(1.4) rotate(15deg)' },
+                    { transform: 'translate(-50%, -50%) scale(1.2) rotate(-10deg)' },
+                    { transform: 'translate(-50%, -50%) scale(1.3) rotate(0deg)' }
                 ];
-                crocoWrapper.animate(biteAnim, { duration: 400, iterations: 1 });
-                
+                crocoWrapper.animate(biteAnim, { duration: 350, iterations: 1 });
+
                 setTimeout(() => {
+                    // Victim card gets eaten / shredded
                     targetCard.style.transition = 'all 0.3s cubic-bezier(0.6, -0.28, 0.735, 0.045)';
                     targetCard.style.transform = 'translate(-50%, -50%) scale(0) rotate(360deg)';
                     targetCard.style.opacity = '0';
-                    targetCard.style.filter = 'contrast(200%) brightness(50%)';
-                    
+                    targetCard.style.filter = 'contrast(200%) brightness(40%)';
+
+                    // Croco retreats happily
                     setTimeout(() => {
                         title.style.opacity = '0';
                         crocoWrapper.style.transition = 'all 0.4s ease-in';
-                        crocoWrapper.style.transform = `translate(-50%, -50%) scale(2)`;
+                        crocoWrapper.style.transform = `translate(-50%, -50%) scale(0) rotate(-180deg)`;
                         crocoWrapper.style.opacity = '0';
                         overlay.style.opacity = '0';
                         setTimeout(() => overlay.remove(), 400);
-                    }, 800);
+                    }, 500);
                 }, 200);
-            }, 450);
+            }, 500);
         }, 50);
     },
 
