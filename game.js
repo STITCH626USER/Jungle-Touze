@@ -455,43 +455,51 @@ class GameEngine {
         this.state = this.getInitialState();
     }
 
-    async hostRoom() {
+    hostRoom() {
         this.resetRoomState();
-        const name = document.getElementById('input-username').value.trim() || 'Hôte';
+        const usernameInput = document.getElementById('input-username');
+        const name = (usernameInput && usernameInput.value.trim()) || 'Hôte';
         this.myName = name;
         this.roomCode = this.generateRoomCode();
         this.isHost = true;
-        // CRITICAL: set myId to a non-empty string BEFORE pushing player into state
-        // If myId stays '' (falsy), checks like !payload.targetPlayerId will incorrectly
-        // treat the host as "no target" when a client tries to target them.
         this.myId = 'JT-' + this.roomCode;
-        try {
-            this.peer = new Peer(this.myId);
-            
-            this.peer.on('connection', (conn) => {
-                this.conns.push(conn);
-                conn.on('data', (data) => this.handleClientData(conn, data));
-                conn.on('close', () => {
-                    this.conns = this.conns.filter(c => c !== conn);
-                    if(this.state.status === 'playing' || this.state.status === 'rolling') {
-                        this.convertPlayerToBot(conn.peer);
-                    } else {
-                        this.state.players = this.state.players.filter(p => p.id !== conn.peer);
-                        this.broadcastState();
-                        this.updateLobbyUI();
-                    }
-                });
-            });
-            ui.showScreen('screen-host');
-            const hostBar = document.getElementById('host-actions-bar');
-            if (hostBar) hostBar.style.display = 'flex';
-        } catch(e) {
-            console.error("PeerJS error:", e);
-            alert("Erreur de connexion au serveur multijoueur. Vérifiez votre connexion.");
-        }
-        document.getElementById('room-code-display').textContent = this.roomCode;
+
+        // Switch to host screen immediately
+        ui.showScreen('screen-host');
+        const hostBar = document.getElementById('host-actions-bar');
+        if (hostBar) hostBar.style.display = 'flex';
+        const codeDisplay = document.getElementById('room-code-display');
+        if (codeDisplay) codeDisplay.textContent = this.roomCode;
+
         this.state.players.push({ id: this.myId, name: this.myName, isBot: false, score: 0, cards: [], isHost: true });
         this.updateLobbyUI();
+
+        try {
+            if (typeof Peer !== 'undefined') {
+                this.peer = new Peer(this.myId);
+                
+                this.peer.on('connection', (conn) => {
+                    this.conns.push(conn);
+                    conn.on('data', (data) => this.handleClientData(conn, data));
+                    conn.on('close', () => {
+                        this.conns = this.conns.filter(c => c !== conn);
+                        if(this.state.status === 'playing' || this.state.status === 'rolling') {
+                            this.convertPlayerToBot(conn.peer);
+                        } else {
+                            this.state.players = this.state.players.filter(p => p.id !== conn.peer);
+                            this.broadcastState();
+                            this.updateLobbyUI();
+                        }
+                    });
+                });
+
+                this.peer.on('error', (err) => {
+                    console.warn("PeerJS error:", err);
+                });
+            }
+        } catch(e) {
+            console.error("PeerJS error:", e);
+        }
     }
 
     joinRoom() {
