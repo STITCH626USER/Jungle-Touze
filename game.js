@@ -1130,7 +1130,8 @@ class GameEngine {
                         p2.cards = p2.cards.filter(c => c.id !== payload.cardId);
                         
                         if (c2) {
-                            this.addHistory(player.name, `a éliminé le ${c2.animal} de ${p2.name}`, 'crocodile');
+                            const c2Name = animalNames[c2.animal] || c2.animal;
+                            this.addHistory(player.name, `a éliminé le ${c2Name} de ${p2.name}`, 'crocodile');
                             
                             if (this.state.deckLeft) this.state.deckLeft.push(c2);
                             
@@ -1143,9 +1144,7 @@ class GameEngine {
                             };
 
                             if (player.id !== this.myId) {
-                                const animalNames = { lion: 'Lion', chameleon: 'Caméléon', octopus: 'Pieuvre', crocodile: 'Crocodile', monkey: 'Singe', crab: 'Crabe', parrot: 'Perroquet', hermit_crab: "Bernard l'Hermite" };
-                                const anName = animalNames[c2.animal] || c2.animal;
-                                ui.toast(`🐊 ${player.name} élimine le ${anName} de ${p2.name} !`);
+                                ui.toast(`🐊 ${player.name} élimine le ${c2Name} de ${p2.name} !`);
                             }
                         }
                     } catch (e) {
@@ -1171,21 +1170,22 @@ class GameEngine {
                 const p2M = this.state.players.find(p => p.id === payload.targetPlayerId);
                 if(p2M) {
                     try {
-                        let myMonkeyIdx = player.cards.findIndex(c => c && c.id === this.state.pendingPower.card.id);
-                        if (myMonkeyIdx === -1) {
-                            myMonkeyIdx = player.cards.findIndex(c => c && c.animal === 'monkey');
+                        const targetCardIndex = p2M.cards.findIndex(c => c && c.id === payload.cardId);
+                        if (targetCardIndex === -1) {
+                            this.nextTurn();
+                            return;
                         }
-                        if (myMonkeyIdx === -1) { this.nextTurn(); return; }
                         
-                        const monkeyCard = player.cards.splice(myMonkeyIdx, 1)[0];
-                        let targetIdx = p2M.cards.findIndex(c => c && c.id === payload.cardId);
-                        if (targetIdx === -1 && p2M.cards.length > 0) targetIdx = 0;
-                        if (targetIdx === -1) { player.cards.push(monkeyCard); this.nextTurn(); return; }
+                        const stolenCard = p2M.cards[targetCardIndex];
+                        let monkeyCard = player.cards.find(c => c && c.id === this.state.pendingPower.card.id);
+                        if (!monkeyCard) monkeyCard = player.cards.find(c => c && c.animal === 'monkey');
                         
-                        const stolenCard = p2M.cards[targetIdx];
-                        if (!stolenCard) { player.cards.push(monkeyCard); this.nextTurn(); return; }
+                        if (!monkeyCard) { this.nextTurn(); return; }
                         
-                        p2M.cards[targetIdx] = monkeyCard;
+                        // Remove monkey from current player
+                        player.cards = player.cards.filter(c => c.id !== monkeyCard.id);
+                        // Place monkey in victim's hand at exact index
+                        p2M.cards[targetCardIndex] = monkeyCard;
                         
                         this.state.lastAnimation = {
                             id: Date.now(),
@@ -1199,7 +1199,8 @@ class GameEngine {
                         this.state.pendingPower = { card: stolenCard, monkeySuccess: true };
                         this.state.activeAction = 'place_or_reject';
                         
-                        this.addHistory(player.name, `a échangé un singe contre le ${stolenCard.animal} de ${p2M.name}`, 'monkey');
+                        const stolenName = animalNames[stolenCard.animal] || stolenCard.animal;
+                        this.addHistory(player.name, `a échangé un Singe contre le ${stolenName} de ${p2M.name}`, 'monkey');
                     } catch(e) {
                         console.error("Monkey power failed:", e);
                         this.nextTurn();
@@ -1228,7 +1229,7 @@ class GameEngine {
                 if(cp) {
                     const moved = cp.cards.splice(payload.fromIndex, 1)[0];
                     cp.cards.splice(payload.toIndex, 0, moved);
-                    this.addHistory(player.name, 'a glisé une carte (Crabe)', 'crab');
+                    this.addHistory(player.name, 'a glissé une carte (Crabe)', 'crab');
                     this.resolveChameleonPair(cp);
                     if (player.id !== this.myId) {
                         ui.toast(`🦀 ${player.name} a glissé une carte.`);
