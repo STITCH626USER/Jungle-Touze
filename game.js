@@ -480,10 +480,14 @@ class GameEngine {
                 this.conns.push(conn);
                 conn.on('data', (data) => this.handleClientData(conn, data));
                 conn.on('close', () => {
-                    this.state.players = this.state.players.filter(p => p.id !== conn.peer);
                     this.conns = this.conns.filter(c => c !== conn);
-                    this.broadcastState();
-                    this.updateLobbyUI();
+                    if(this.state.status === 'playing' || this.state.status === 'rolling') {
+                        this.convertPlayerToBot(conn.peer);
+                    } else {
+                        this.state.players = this.state.players.filter(p => p.id !== conn.peer);
+                        this.broadcastState();
+                        this.updateLobbyUI();
+                    }
                 });
             });
             ui.showScreen('screen-host');
@@ -1383,27 +1387,62 @@ class GameEngine {
             player.cards.splice(chameleons[chameleons.length - 2], 1);
         }
     }
+    convertPlayerToBot(playerId) {
+        if(!this.isHost) return;
+        const player = this.state.players.find(p => p.id === playerId);
+        if(!player) return;
+        if(player.isBot) return; // Already a bot
+
+        player.isBot = true;
+        player.name = player.name + " (Bot)";
+        this.addHistory(player.name, "a quitté — remplacé par un Bot 🤖", null);
+        ui.toast(`🤖 ${player.name} prend le relais !`);
+        this.broadcastState();
+
+        // If it was their turn or rolling dice, trigger the bot
+        if(this.state.status === 'rolling') {
+            this.triggerBotDiceRolls();
+        } else if(this.state.status === 'playing') {
+            const activePlayer = this.state.players[this.state.turnIndex];
+            if(activePlayer && activePlayer.id === player.id) {
+                this.playBotTurn(activePlayer);
+            }
+        }
+    }
+
     handlePlayerQuit(playerId) {
         if(this.isHost) {
-            this.state.players = this.state.players.filter(p => p.id !== playerId);
-            if(this.state.players.length === 0) {
-                // Return to home
+            if(this.state.status === 'playing' || this.state.status === 'rolling') {
+                this.convertPlayerToBot(playerId);
             } else {
+                this.state.players = this.state.players.filter(p => p.id !== playerId);
                 this.broadcastState();
+                this.updateLobbyUI();
             }
         }
     }
 
     quitGame() {
         ui.hideModal('quit-confirm-modal');
-        if(this.isHost) {
-            this.conns.forEach(c => c.close());
-            if(this.peer) this.peer.destroy();
-            ui.showScreen('screen-home');
-        } else {
+        if(!this.isHost) {
+            this.sendAction('quit');
             if(this.conn) this.conn.close();
             if(this.peer) this.peer.destroy();
             ui.showScreen('screen-home');
+        } else {
+            // Host leaving
+            if(this.state.status === 'playing' || this.state.status === 'rolling') {
+                // Convert host to bot so remaining clients can continue if possible
+                this.convertPlayerToBot(this.myId);
+                // Also close own connections and return home
+                this.conns.forEach(c => c.close());
+                if(this.peer) this.peer.destroy();
+                ui.showScreen('screen-home');
+            } else {
+                this.conns.forEach(c => c.close());
+                if(this.peer) this.peer.destroy();
+                ui.showScreen('screen-home');
+            }
         }
     }
 
