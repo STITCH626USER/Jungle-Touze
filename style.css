@@ -258,16 +258,92 @@ input[type="text"]:focus {
     border-radius: 20px;
     cursor: pointer;
     transition: all 0.25s ease;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 8px;
-    width: 100%;
 }
+
 .btn-rules-embedded:hover {
     background: rgba(255, 255, 255, 0.12);
-    color: white;
-    border-color: rgba(255, 255, 255, 0.35);
+    border-color: rgba(0, 229, 255, 0.4);
+    color: #fff;
+    transform: translateY(-1px);
+}
+
+/* --- Galerie des cartes du jeu (En dessous du menu d'accueil) --- */
+.home-cards-showcase {
+    margin-top: 14px;
+    width: 100%;
+    max-width: 440px;
+    background: rgba(10, 6, 20, 0.75);
+    border: 1.5px solid rgba(255, 255, 255, 0.15);
+    border-radius: 24px;
+    padding: 12px 14px 14px;
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.7), 0 0 20px rgba(255, 51, 102, 0.18);
+    z-index: 10;
+}
+
+.cards-showcase-header {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    margin-bottom: 10px;
+}
+
+.showcase-title {
+    font-size: 0.8rem;
+    font-weight: 900;
+    text-transform: uppercase;
+    letter-spacing: 1.2px;
+    color: rgba(255, 255, 255, 0.9);
+    text-shadow: 0 0 8px rgba(0, 229, 255, 0.5);
+}
+
+.cards-showcase-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 8px;
+}
+
+.showcase-card-thumb {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 5px;
+    cursor: pointer;
+    transition: transform 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+.showcase-card-thumb img {
+    width: 100%;
+    aspect-ratio: 3/4;
+    object-fit: cover;
+    border-radius: 8px;
+    border: 1.5px solid rgba(255, 255, 255, 0.25);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.6);
+    background: #000;
+    transition: all 0.2s ease;
+}
+
+.showcase-card-thumb:hover img {
+    border-color: #00e5ff;
+    box-shadow: 0 0 14px rgba(0, 229, 255, 0.8);
+    transform: translateY(-3px) scale(1.06);
+}
+
+.showcase-card-thumb .card-thumb-label {
+    font-size: 0.68rem;
+    font-weight: 800;
+    color: rgba(255, 255, 255, 0.8);
+    letter-spacing: 0.4px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 100%;
+}
+
+.showcase-card-thumb:hover .card-thumb-label {
+    color: #ff3366;
+    text-shadow: 0 0 6px rgba(255, 51, 102, 0.6);
 }
 
 
