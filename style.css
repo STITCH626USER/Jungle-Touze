@@ -47,7 +47,7 @@ body {
     position: relative;
     display: flex;
     flex-direction: column;
-    max-width: 1000px;
+    max-width: 1600px;
     margin: 0 auto;
 }
 
@@ -332,9 +332,28 @@ input[type="text"]:focus { outline: none; border-color: var(--secondary); box-sh
     #app-container { display: none !important; }
 }
 
-@media (min-width: 768px) {
-    .local-player-area { padding: 15px 10vw; }
-    .opponents-vertical-list { justify-content: center; padding: 25px; }
+@media (min-width: 900px) {
+    .local-player-area { padding: 12px 6vw; }
+    .my-collection .card { width: clamp(90px, 10vw, 130px); }
+    .my-collection .card:not(:first-child) { margin-left: clamp(-18px, -2vw, -10px); }
+    .decks-area { gap: clamp(40px, 12vw, 160px); }
+    .deck { width: clamp(140px, 15vw, 210px); }
+    .opponents-vertical-list {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+        gap: 12px;
+        padding: 12px 20px;
+        max-height: 28vh;
+    }
+    .opponent-slot { padding: 10px 16px; }
+    .opp-cards-mini img { width: clamp(65px, 6vw, 90px); }
+}
+
+@media (min-width: 1200px) {
+    .local-player-area { padding: 16px 12vw; }
+    .my-collection .card { width: clamp(105px, 9vw, 145px); }
+    .decks-area { gap: clamp(60px, 15vw, 220px); }
+    .deck { width: clamp(160px, 13vw, 230px); }
 }
 
 .help-text p { margin-bottom: 10px; line-height: 1.4; color: #ccc; }
