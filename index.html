@@ -33,15 +33,17 @@
             <div class="logo-container bounce-in">
                 <img src="assets/logo_neon.png" alt="Jungle Touze" class="home-logo-img">
             </div>
-            <p class="subtitle">Le jeu du <span class="flame-word">dompteur</span> de la Jungle</p>
+            
             <div class="menu-actions fade-in-up">
-                <input type="text" id="input-username" placeholder="Votre prénom..." maxlength="10" autocomplete="off">
-                <div class="menu-btn-row">
-                    <button class="btn btn-main" onclick="game.hostRoom()">Créer</button>
-                    <button class="btn btn-secondary" onclick="ui.showScreen('screen-join')">Rejoindre</button>
+                <div class="menu-input-row">
+                    <input type="text" id="input-username" placeholder="Votre prénom..." maxlength="10" autocomplete="off">
+                    <button class="btn btn-main btn-action-compact" onclick="game.hostRoom()">Créer</button>
+                    <button class="btn btn-secondary btn-action-compact" onclick="ui.showScreen('screen-join')">Rejoindre</button>
                 </div>
-                <button id="btn-install-app" class="btn" style="display:none; background:linear-gradient(135deg,#1e90ff,#3742fa);" onclick="ui.installPWA()">Installer l'application</button>
-                <button class="btn btn-rules" onclick="ui.showHelpModal()">Règles du Jeu <span class="version-pill">v2.22</span></button>
+                <div class="menu-footer-row">
+                    <button id="btn-install-app" class="btn btn-rules" style="display:none;" onclick="ui.installPWA()">📲 Installer</button>
+                    <button class="btn btn-rules" onclick="ui.showHelpModal()">📖 Règles du Jeu <span class="version-pill">v2.23</span></button>
+                </div>
             </div>
         </div>
 
