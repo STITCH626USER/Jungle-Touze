@@ -146,10 +146,10 @@ input[type="text"]:focus { outline: none; border-color: var(--secondary); box-sh
 
 /* --- Home Screen --- */
 #screen-home {
-    justify-content: center;
+    justify-content: space-between;
     align-items: center;
     text-align: center;
-    padding: 20px;
+    padding: 24px 20px 20px;
     position: relative;
     overflow: hidden;
 }
@@ -161,35 +161,33 @@ input[type="text"]:focus { outline: none; border-color: var(--secondary); box-sh
     bottom: 0;
     left: 0;
     right: 0;
-    height: 82%;
+    height: 88%;
     background-image: url('assets/home_bg_jungle.png');
     background-size: cover;
     background-position: center bottom;
     background-repeat: no-repeat;
     pointer-events: none;
     z-index: 0;
-    opacity: 0.85;
-    mask-image: linear-gradient(to top, rgba(0,0,0,1) 0%, rgba(0,0,0,0.9) 60%, rgba(0,0,0,0) 100%);
-    -webkit-mask-image: linear-gradient(to top, rgba(0,0,0,1) 0%, rgba(0,0,0,0.9) 60%, rgba(0,0,0,0) 100%);
+    opacity: 0.92;
+    mask-image: linear-gradient(to top, rgba(0,0,0,1) 0%, rgba(0,0,0,0.95) 75%, rgba(0,0,0,0) 100%);
+    -webkit-mask-image: linear-gradient(to top, rgba(0,0,0,1) 0%, rgba(0,0,0,0.95) 75%, rgba(0,0,0,0) 100%);
 }
 
 #screen-home > * { position: relative; z-index: 1; }
 
-
-
-/* Logo : PNG transparent — noir converti en alpha, néon pur visible */
+/* Logo : PNG transparent */
 .home-logo-img {
     max-width: 100%;
-    width: clamp(280px, 88vw, 540px);
+    width: clamp(240px, 75vw, 420px);
     height: auto;
     display: block;
     margin: 0 auto;
-    filter: drop-shadow(0 0 18px rgba(0, 229, 255, 0.45))
-            drop-shadow(0 0 10px rgba(255, 51, 102, 0.35));
+    filter: drop-shadow(0 0 16px rgba(0, 229, 255, 0.4))
+            drop-shadow(0 0 8px rgba(255, 51, 102, 0.3));
     animation: floatLogo 5s ease-in-out infinite;
 }
 
-.subtitle { font-size: clamp(1rem,4vw,1.6rem); color: rgba(255,255,255,0.85); margin-top: 8px; font-weight: 700; letter-spacing: 0.5px; }
+.subtitle { font-size: clamp(0.9rem,3.2vw,1.3rem); color: rgba(255,255,255,0.85); margin-top: 4px; font-weight: 700; letter-spacing: 0.5px; }
 .flame-word {
     background: linear-gradient(180deg, #fff7aa 0%, #FFD700 20%, #FF8C00 50%, #FF3300 80%, #cc0000 100%);
     -webkit-background-clip: text;
@@ -205,7 +203,65 @@ input[type="text"]:focus { outline: none; border-color: var(--secondary); box-sh
     from { filter: drop-shadow(0 0 5px rgba(255,140,0,0.8)) drop-shadow(0 0 12px rgba(255,60,0,0.6)); transform: scaleY(1); }
     to   { filter: drop-shadow(0 0 10px rgba(255,200,0,1))  drop-shadow(0 0 22px rgba(255,80,0,0.9));  transform: scaleY(1.04); }
 }
-.menu-actions { margin-top: 4vh; width: 100%; max-width: 450px; display: flex; flex-direction: column; gap: 20px; }
+
+/* Menu Actions : Cartouche Glassmorphism Translucide */
+.menu-actions {
+    margin-top: auto;
+    margin-bottom: max(10px, env(safe-area-inset-bottom));
+    width: 100%;
+    max-width: 380px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    background: rgba(15, 10, 28, 0.55);
+    border: 1.5px solid rgba(255, 255, 255, 0.18);
+    border-radius: 28px;
+    padding: 16px 18px;
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    box-shadow: 0 12px 35px rgba(0, 0, 0, 0.6), 0 0 20px rgba(0, 229, 255, 0.15);
+}
+
+.menu-actions input[type="text"] {
+    margin-bottom: 0;
+    padding: 12px 18px;
+    font-size: 1rem;
+    background: rgba(0, 0, 0, 0.45);
+    border: 1.5px solid rgba(0, 229, 255, 0.35);
+    box-shadow: inset 0 2px 8px rgba(0, 0, 0, 0.4);
+}
+
+.menu-btn-row {
+    display: flex;
+    gap: 10px;
+    width: 100%;
+}
+
+.menu-actions .btn {
+    padding: 13px 18px;
+    font-size: 0.95rem;
+    letter-spacing: 0.8px;
+}
+
+.menu-actions .btn-main {
+    background: linear-gradient(135deg, rgba(255, 51, 102, 0.85), rgba(179, 0, 89, 0.85));
+    border: 1px solid rgba(255, 100, 150, 0.5);
+    box-shadow: 0 0 15px rgba(255, 51, 102, 0.35);
+}
+
+.menu-actions .btn-secondary {
+    background: linear-gradient(135deg, rgba(0, 229, 255, 0.75), rgba(0, 150, 255, 0.75));
+    border: 1px solid rgba(0, 240, 255, 0.5);
+    box-shadow: 0 0 15px rgba(0, 229, 255, 0.35);
+}
+
+.menu-actions .btn-rules {
+    padding: 8px 16px;
+    font-size: 0.8rem;
+    background: rgba(255, 255, 255, 0.06);
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    border-radius: 30px;
+}
 
 
 

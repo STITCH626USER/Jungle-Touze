@@ -36,10 +36,12 @@
             <p class="subtitle">Le jeu du <span class="flame-word">dompteur</span> de la Jungle</p>
             <div class="menu-actions fade-in-up">
                 <input type="text" id="input-username" placeholder="Votre prénom..." maxlength="10" autocomplete="off">
-                <button class="btn btn-main" onclick="game.hostRoom()">Créer un Salon</button>
-                <button class="btn btn-secondary" onclick="ui.showScreen('screen-join')">Rejoindre</button>
+                <div class="menu-btn-row">
+                    <button class="btn btn-main" onclick="game.hostRoom()">Créer</button>
+                    <button class="btn btn-secondary" onclick="ui.showScreen('screen-join')">Rejoindre</button>
+                </div>
                 <button id="btn-install-app" class="btn" style="display:none; background:linear-gradient(135deg,#1e90ff,#3742fa);" onclick="ui.installPWA()">Installer l'application</button>
-                <button class="btn btn-rules" onclick="ui.showHelpModal()">Règles du Jeu <span class="version-pill">v2.21</span></button>
+                <button class="btn btn-rules" onclick="ui.showHelpModal()">Règles du Jeu <span class="version-pill">v2.22</span></button>
             </div>
         </div>
 
