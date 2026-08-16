@@ -1,4 +1,4 @@
-const CACHE_NAME = 'jungle-touze-v240';
+const CACHE_NAME = 'jungle-touze-v241';
 const ASSETS = [
     './',
     './index.html',
@@ -6,8 +6,9 @@ const ASSETS = [
     './game.js',
     './manifest.json',
     './sw.js',
+    './assets/home_bg_jungle.png',
     './assets/card_back.jpg',
-    './assets/logo_horizontal.png',
+    './assets/logo_neon.png',
     './assets/card_lion.jpg',
     './assets/card_chameleon.jpg',
     './assets/card_octopus.jpg',
