@@ -408,6 +408,7 @@ class GameEngine {
         this.inactivitySeconds = 45;
         this.botLivenessTimer = null;
         this.myTurnToastShown = false;
+        this.hasSeenPlayingStart = false;
         
         this.initPWA();
         this.initParticles();
@@ -435,6 +436,7 @@ class GameEngine {
     }
 
     resetRoomState() {
+        this.hasSeenPlayingStart = false;
         if(this.peer) this.peer.destroy();
         this.conns.forEach(c => c.close());
         this.conns = [];
@@ -538,10 +540,10 @@ class GameEngine {
                             }
                         }
                         else if(this.state.status === 'playing') {
-                            // Only trigger screen switch + toast on the FIRST time we see 'playing'
-                            if(document.getElementById('screen-game') && !document.getElementById('screen-game').classList.contains('active')) {
-                                ui.showScreen('screen-game');
-                                ui.hideModal('dice-modal');
+                            ui.showScreen('screen-game');
+                            ui.hideModal('dice-modal');
+                            if(!this.hasSeenPlayingStart) {
+                                this.hasSeenPlayingStart = true;
                                 if(this.state.players[this.state.turnIndex]) {
                                     ui.toast(`C'est parti ! ${this.state.players[this.state.turnIndex].name} commence !`);
                                 }
