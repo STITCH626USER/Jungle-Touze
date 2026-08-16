@@ -965,11 +965,14 @@ class GameEngine {
         }
 
         const activePlayer = this.state.players[this.state.turnIndex];
-        if (activePlayer && activePlayer.id !== playerId && !['quit', 'REMATCH', 'RETURN_LOBBY', 'acknowledge_parrot_fail'].includes(action)) {
+        if (activePlayer && activePlayer.id !== playerId && !['quit', 'timeout_handover', 'REMATCH', 'RETURN_LOBBY', 'acknowledge_parrot_fail'].includes(action)) {
             return;
         }
 
         switch(action) {
+            case 'timeout_handover':
+                this.convertPlayerToBot(playerId);
+                break;
             case 'quit':
                 this.handlePlayerQuit(playerId);
                 break;
@@ -2177,6 +2180,17 @@ class GameEngine {
             left--;
             if(left <= 0) {
                 this.stopTimer();
+                // Turn timeout reached: Handover to bot immediately for this player
+                if (this.isHost) {
+                    const activePlayer = this.state.players[this.state.turnIndex];
+                    if (activePlayer && !activePlayer.isBot) {
+                        ui.toast(`⏰ Temps écoulé pour ${activePlayer.name} — Un Bot prend le relais ! 🤖`);
+                        this.convertPlayerToBot(activePlayer.id);
+                    }
+                } else {
+                    // Client notifies host of timeout
+                    this.sendAction('timeout_handover', {});
+                }
             } else {
                 b.textContent = `⌛ Votre tour : ${left}s`;
             }
@@ -2193,14 +2207,13 @@ class GameEngine {
             ui.showModal('afk-disconnect-modal');
             const myPlayer = this.state.players.find(p => p.id === this.myId);
             if(myPlayer) {
-                myPlayer.isBot = true;
-                myPlayer.name = myPlayer.name + " (Bot)";
-                this.broadcastState();
                 if(this.isHost) {
-                    this.playBotTurn(myPlayer);
+                    this.convertPlayerToBot(myPlayer.id);
+                } else {
+                    this.sendAction('timeout_handover', {});
                 }
             }
-        }, 100000);
+        }, 45000); // 45s AFK limit
     }
     
     stopAfkTimer() {
