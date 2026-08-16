@@ -1748,16 +1748,26 @@ class GameEngine {
                     const imgEl = document.getElementById('parrot-result-img');
                     
                     const p = this.state.pendingPower;
-                    if(p) {
+                    if(p && isMyTurn) {
                         const realName = animalNames[p.realCard.animal] || p.realCard.animal;
                         titleEl.innerHTML = `<span style="color:#ff6b6b">Perdu !</span>`;
                         descEl.innerHTML = `Vous aviez parié <strong>${p.failedGuess}</strong>,<br>mais c'était un(e) <strong>${realName}</strong>.`;
                         imgEl.src = `assets/card_${p.realCard.animal}.jpg`;
                         imgEl.style.display = 'inline-block';
+                        ui.showModal('parrot-result-modal');
+                    } else if (p && !isMyTurn) {
+                        // Other players see a clean informational waiting box or toast
+                        ui.hideModal('parrot-result-modal');
+                        actModal.style.display = 'flex';
+                        cActions.style.display = 'flex';
+                        const realName = animalNames[p.realCard.animal] || p.realCard.animal;
+                        cActions.innerHTML = `<p style="color:var(--danger);text-align:center;font-weight:900;margin:0;font-size:1.1rem;">🦜 ${activePlayer ? activePlayer.name : 'Le joueur'} a parié ${p.failedGuess}... Perdu ! (C'était un(e) ${realName})</p>`;
                     }
-                    
-                    ui.showModal('parrot-result-modal');
                 }
+            }
+
+            if(this.state.activeAction !== 'parrot_failed') {
+                ui.hideModal('parrot-result-modal');
             }
             
             if(this.state.pendingPower && this.state.pendingPower.showLove) {
