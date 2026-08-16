@@ -15,10 +15,6 @@ const ANIMALS = [
     { id: 'hermit_crab', name: 'Bernard l\'Hermite', power: 'Rejouez si vous avez un Crabe' }
 ];
 
-// Son désactivé — stub pour compatibilité
-const soundEngine = { play() {}, init() {}, toggleMute() {}, updateBtn() {}, initAudioContext() {} };
-
-
 // --- UI MANAGER ---
 const ui = {
     showScreen(id) {
@@ -197,7 +193,6 @@ const ui = {
                     { transform: 'translate(-50%, -50%) scale(1.4) rotate(0deg)' }
                 ];
                 crocoWrapper.animate(biteAnim, { duration: 400, iterations: 1 });
-                if(soundEngine) soundEngine.play('crocodile');
                 
                 setTimeout(() => {
                     targetCard.style.transition = 'all 0.3s cubic-bezier(0.6, -0.28, 0.735, 0.045)';
@@ -277,8 +272,6 @@ const ui = {
             monkeyHead.style.left = `${targetRect.left + targetRect.width/2}px`;
             monkeyHead.style.transform = `translate(-50%, -50%) scale(0.8) rotate(360deg)`;
             
-            if(soundEngine) soundEngine.play('monkey');
-            
             setTimeout(() => {
                 monkeyHead.style.transition = 'all 0.3s ease-in';
                 monkeyHead.style.transform = `translate(-50%, -50%) scale(0) rotate(720deg)`;
@@ -309,7 +302,6 @@ const ui = {
         document.getElementById('round-end-title').textContent = isMe ? `🎉 VOUS REMPORTEZ LA PARTIE !` : `❌ ${winnerData.name.toUpperCase()} REMPORTE LA PARTIE !`;
         document.getElementById('round-end-subtitle').textContent = isMe ? "Champion(ne) de la Jungle Touze !" : "La victoire vous échappe...";
         if (isMe) {
-            soundEngine.play('win');
             this.playConfetti();
         }
         
@@ -753,7 +745,6 @@ class GameEngine {
         
         const roll = Math.floor(Math.random() * 6) + 1;
         this.state.diceResults.push({ id: player.id, name: player.name, roll });
-        soundEngine.play('dice');
         this.broadcastState();
         
         // Check if all players have rolled
@@ -1003,7 +994,6 @@ class GameEngine {
                 const side = payload.side; // 'left' or 'right'
                 const c = this.state.pendingPower.card;
                 
-                soundEngine.play(c.animal);
                 this.addHistory(activePlayer.name, `a placé une carte`, c.animal);
                 
                 if (side === 'left') activePlayer.cards.unshift(c);
@@ -1393,7 +1383,6 @@ class GameEngine {
         if (chameleons.length >= 2) {
             this.addHistory(player.name, "a eu 2 Caméléons ! Ils s'autodétruisent.", null);
             ui.toast("💥 2 Caméléons détruits !");
-            soundEngine.play('chameleon');
             // Remove the last two chameleons
             player.cards.splice(chameleons[chameleons.length - 1], 1);
             player.cards.splice(chameleons[chameleons.length - 2], 1);

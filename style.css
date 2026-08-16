@@ -253,36 +253,40 @@ input[type="text"]:focus {
     box-shadow: 0 0 14px rgba(0, 229, 255, 0.4);
 }
 
-/* Footer tout en bas (discret, uniquement la version/règles) */
+/* Footer tout en bas (ancré tout en bas de l'écran avec pastille) */
 .home-bottom-footer {
-    margin-top: auto;
+    position: absolute;
+    bottom: max(16px, env(safe-area-inset-bottom));
+    left: 0;
+    right: 0;
     display: flex;
     justify-content: center;
     align-items: center;
     gap: 8px;
     width: 100%;
-    z-index: 10;
+    z-index: 100;
 }
 
 .btn-rules-mini {
-    background: rgba(10, 6, 20, 0.7);
-    border: 1px solid rgba(255, 255, 255, 0.2);
-    color: rgba(255, 255, 255, 0.85);
-    font-size: 0.8rem;
+    background: rgba(20, 14, 35, 0.85);
+    border: 1px solid rgba(255, 255, 255, 0.25);
+    color: rgba(255, 255, 255, 0.9);
+    font-size: 0.82rem;
     font-weight: 800;
-    letter-spacing: 0.5px;
-    padding: 6px 16px;
-    border-radius: 20px;
-    backdrop-filter: blur(14px);
-    -webkit-backdrop-filter: blur(14px);
-    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.6);
+    letter-spacing: 0.6px;
+    padding: 8px 20px;
+    border-radius: 24px;
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.6);
     cursor: pointer;
     transition: all 0.25s ease;
 }
 .btn-rules-mini:hover {
-    background: rgba(255, 255, 255, 0.15);
+    background: rgba(255, 255, 255, 0.18);
     color: white;
-    border-color: rgba(255, 255, 255, 0.4);
+    border-color: rgba(255, 255, 255, 0.5);
+    transform: translateY(-2px);
 }
 
 
