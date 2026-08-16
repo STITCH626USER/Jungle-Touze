@@ -1,4 +1,4 @@
-const CACHE_NAME = 'jungle-touze-v7';
+const CACHE_NAME = 'jungle-touze-v240';
 const ASSETS = [
     './',
     './index.html',
