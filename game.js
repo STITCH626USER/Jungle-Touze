@@ -418,7 +418,6 @@ class GameEngine {
         this.myTurnToastShown = false;
         this.hasSeenPlayingStart = false;
         
-        this.initEventListeners();
         this.initPWA();
     }
 
