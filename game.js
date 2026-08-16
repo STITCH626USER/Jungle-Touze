@@ -1287,7 +1287,13 @@ class GameEngine {
                     this.addHistory(player.name, `s'est trompé. A dit ${guessName} mais c'était ${realName}`, 'parrot');
                     
                     nextC.faceUp = true;
-                    arr.unshift(nextC);
+                    if (deckId === 1) {
+                        if (!this.state.deckLeft) this.state.deckLeft = [];
+                        this.state.deckLeft.unshift(nextC);
+                    } else {
+                        if (!this.state.deckRight) this.state.deckRight = [];
+                        this.state.deckRight.unshift(nextC);
+                    }
                     this.state.lastRejected = { animal: nextC.animal, deck: deckId };
                     
                     this.state.pendingPower = { 
