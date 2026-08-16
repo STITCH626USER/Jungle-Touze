@@ -1282,9 +1282,8 @@ class GameEngine {
                 if(nextC.animal === payload.guess) {
                     this.addHistory(player.name, `a deviné ${guessName} avec succès!`, 'parrot');
                     ui.toast(player.id === this.myId 
-                        ? `Bien joué ! Vous gagnez le ${guessName} et rejouez !`
-                        : `🦜 ${player.name} avait parié ${guessName}... et gagne !`);
-                    player.extraTurn = true;
+                        ? `Bien joué ! Vous gagnez le ${guessName} !`
+                        : `🦜 ${player.name} avait parié ${guessName}... et le gagne !`);
                     this.state.pendingPower = { card: nextC, fromDeck: deckId, parrotSuccess: true };
                     this.state.activeAction = 'place_or_reject';
                     this.broadcastState();
