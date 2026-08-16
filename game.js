@@ -519,25 +519,7 @@ class GameEngine {
                         }
                         else if(this.state.status === 'rolling') {
                             ui.showScreen('screen-game');
-                            // Show dice modal for client with live results
-                            ui.showModal('dice-modal');
-                            const btn = document.getElementById('btn-roll-dice');
-                            if(btn) btn.style.display = 'none'; // Host rolls for all
-                            const scoresList = document.getElementById('dice-scores-list');
-                            const resEl = document.getElementById('dice-result');
-                            if(resEl) resEl.innerHTML = this.state.diceWinner
-                                ? `<span style="color:var(--secondary);font-size:1.3rem;">C'est ${this.state.diceWinner} qui commence !</span>`
-                                : "Résultats des dés :";
-                            if(scoresList && this.state.diceResults) {
-                                scoresList.innerHTML = this.state.diceResults
-                                    .map(r => `<div><strong>${r.name}</strong> : 🎲 ${r.roll}</div>`)
-                                    .join('');
-                            }
-                            const box = document.getElementById('dice-visual-box');
-                            if(box && this.state.diceResults && this.state.diceResults.length > 0) {
-                                const last = this.state.diceResults[this.state.diceResults.length - 1];
-                                box.textContent = last.roll;
-                            }
+                            this.renderDiceModal();
                         }
                         else if(this.state.status === 'playing') {
                             ui.showScreen('screen-game');
@@ -707,89 +689,116 @@ class GameEngine {
     startGame() {
         this.clearLocks();
         this.setupDecks();
-        this.state.diceResults = []; // Shared dice results for all clients
+        this.state.diceResults = []; // Shared dice results for all players: [{ id, name, roll }]
+        this.state.diceWinner = null;
         this.state.status = 'rolling';
         this.broadcastState();
         ui.showScreen('screen-game');
-        
-        ui.showModal('dice-modal');
-        const resEl = document.getElementById('dice-result');
-        if(resEl) resEl.innerHTML = "Lancement des dés...";
-        const scoresList = document.getElementById('dice-scores-list');
-        if(scoresList) scoresList.innerHTML = "";
-        
-        // Show the roll button for host only
-        const btn = document.getElementById('btn-roll-dice');
-        if(btn) btn.style.display = 'block';
-        
-        const box = document.getElementById('dice-visual-box');
-        if(box) {
-            box.textContent = '🎲';
-            box.style.animation = 'none';
-        }
+        this.renderDiceModal();
+
+        // Automatically trigger bots to roll their dice after a slight delay
+        setTimeout(() => this.triggerBotDiceRolls(), 800);
     }
-    
+
+    triggerBotDiceRolls() {
+        if(!this.isHost || this.state.status !== 'rolling') return;
+        this.state.players.forEach(p => {
+            if(p.isBot) {
+                const alreadyRolled = this.state.diceResults && this.state.diceResults.some(r => r.id === p.id);
+                if(!alreadyRolled) {
+                    setTimeout(() => {
+                        if(this.state.status === 'rolling') {
+                            this.handlePlayerDiceRoll(p.id);
+                        }
+                    }, 600 + Math.random() * 1200);
+                }
+            }
+        });
+    }
+
     rollMyDice() {
-        const btn = document.getElementById('btn-roll-dice');
-        if(btn) btn.style.display = 'none';
-        
-        const scoresList = document.getElementById('dice-scores-list');
-        const resEl = document.getElementById('dice-result');
-        if(resEl) resEl.innerHTML = "Résultats des dés :";
-        if(scoresList) scoresList.innerHTML = "";
+        if(this.state.status !== 'rolling') return;
+        this.sendAction('roll_dice');
+    }
+
+    handlePlayerDiceRoll(playerId) {
+        if(!this.isHost || this.state.status !== 'rolling') return;
         if(!this.state.diceResults) this.state.diceResults = [];
         
-        const rolls = [];
-        let rollIndex = 0;
+        // Prevent duplicate rolls
+        if(this.state.diceResults.some(r => r.id === playerId)) return;
         
-        const rollNext = () => {
-            if(rollIndex < this.state.players.length) {
-                const p = this.state.players[rollIndex];
-                const roll = Math.floor(Math.random()*6)+1;
-                rolls.push({ id: p.id, name: p.name, roll: roll });
-                if(scoresList) scoresList.innerHTML += `<div><strong>${p.name}</strong> : 🎲 ${roll}</div>`;
-                
-                const box = document.getElementById('dice-visual-box');
-                if(box) {
-                    box.style.animation = 'none';
-                    box.offsetHeight;
-                    box.style.animation = 'diceRoll 0.5s ease-out';
-                    box.textContent = roll;
-                }
-                
-                // Broadcast each roll so clients can see results in real time
-                this.state.diceResults.push({ name: p.name, roll });
-                this.broadcastState();
-                
-                soundEngine.play('dice');
-                rollIndex++;
-                setTimeout(rollNext, 800);
-            } else {
-                // Determine order
-                rolls.sort((a, b) => b.roll - a.roll);
-                this.state.turnOrder = rolls.map(r => r.id);
-                this.state.players.sort((a, b) => this.state.turnOrder.indexOf(a.id) - this.state.turnOrder.indexOf(b.id));
-                this.state.turnIndex = 0;
-                
-                const starter = rolls[0];
-                if(resEl) resEl.innerHTML = `<span style="color:var(--secondary);font-size:1.3rem;">C'est ${starter.name} qui commence !</span>`;
-                
-                // Final broadcast with winner info before starting
-                this.state.diceWinner = starter.name;
-                this.broadcastState();
-                
-                setTimeout(() => {
-                    ui.hideModal('dice-modal');
-                    this.state.status = 'playing';
-                    this.state.activeAction = 'draw';
-                    this.state.diceResults = [];
-                    this.state.diceWinner = null;
-                    this.broadcastState();
-                    ui.toast(`C'est parti, ${starter.name} commence !`);
-                }, 2500);
+        const player = this.state.players.find(p => p.id === playerId);
+        if(!player) return;
+        
+        const roll = Math.floor(Math.random() * 6) + 1;
+        this.state.diceResults.push({ id: player.id, name: player.name, roll });
+        soundEngine.play('dice');
+        this.broadcastState();
+        
+        // Check if all players have rolled
+        if(this.state.diceResults.length >= this.state.players.length) {
+            this.finishDiceRoll();
+        }
+    }
+
+    finishDiceRoll() {
+        if(!this.isHost || this.state.status !== 'rolling') return;
+        
+        // Determine order by highest roll
+        const rolls = [...this.state.diceResults];
+        rolls.sort((a, b) => b.roll - a.roll);
+        this.state.turnOrder = rolls.map(r => r.id);
+        this.state.players.sort((a, b) => this.state.turnOrder.indexOf(a.id) - this.state.turnOrder.indexOf(b.id));
+        this.state.turnIndex = 0;
+        
+        const starter = rolls[0];
+        this.state.diceWinner = starter.name;
+        this.broadcastState();
+        
+        setTimeout(() => {
+            ui.hideModal('dice-modal');
+            this.state.status = 'playing';
+            this.state.activeAction = 'draw';
+            this.state.diceResults = [];
+            this.state.diceWinner = null;
+            this.broadcastState();
+            ui.toast(`C'est parti, ${starter.name} commence !`);
+        }, 2500);
+    }
+
+    renderDiceModal() {
+        ui.showModal('dice-modal');
+        const resEl = document.getElementById('dice-result');
+        const scoresList = document.getElementById('dice-scores-list');
+        const btn = document.getElementById('btn-roll-dice');
+        const box = document.getElementById('dice-visual-box');
+
+        if(this.state.diceWinner) {
+            if(resEl) resEl.innerHTML = `<span style="color:var(--secondary);font-size:1.3rem;">C'est ${this.state.diceWinner} qui commence !</span>`;
+            if(btn) btn.style.display = 'none';
+        } else {
+            const hasMyRoll = this.state.diceResults && this.state.diceResults.some(r => r.id === this.myId);
+            if(resEl) {
+                resEl.innerHTML = hasMyRoll ? "En attente des autres joueurs..." : "À vous de lancer votre dé !";
             }
-        };
-        rollNext();
+            if(btn) {
+                btn.style.display = hasMyRoll ? 'none' : 'block';
+            }
+        }
+
+        if(scoresList && this.state.diceResults) {
+            scoresList.innerHTML = this.state.diceResults
+                .map(r => `<div><strong>${r.name}</strong> : 🎲 ${r.roll}</div>`)
+                .join('');
+        }
+
+        if(box && this.state.diceResults && this.state.diceResults.length > 0) {
+            const last = this.state.diceResults[this.state.diceResults.length - 1];
+            box.textContent = last.roll;
+        } else if(box) {
+            box.textContent = '🎲';
+        }
     }
 
     setupDecks() {
@@ -901,6 +910,11 @@ class GameEngine {
 
     // --- ACTION PROCESSING (Host Only) ---
     processAction(playerId, action, payload) {
+        if(action === 'roll_dice') {
+            this.handlePlayerDiceRoll(playerId);
+            return;
+        }
+
         const activePlayer = this.state.players[this.state.turnIndex];
         if (activePlayer.id !== playerId && !['quit'].includes(action)) {
             return;
@@ -1371,7 +1385,10 @@ class GameEngine {
         const isMyTurn = activePlayer && activePlayer.id === this.myId;
         
         const updateDOM = () => {
-            // Animal names used across multiple blocks
+            if(this.state.status === 'rolling') {
+                this.renderDiceModal();
+                return;
+            }
             const animalNames = {
                 lion: 'Lion', chameleon: 'Caméléon', octopus: 'Pieuvre',
                 crocodile: 'Crocodile', monkey: 'Singe', crab: 'Crabe',
