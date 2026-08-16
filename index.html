@@ -39,7 +39,7 @@
                 <button class="btn btn-main" onclick="game.hostRoom()">Créer un Salon</button>
                 <button class="btn btn-secondary" onclick="ui.showScreen('screen-join')">Rejoindre</button>
                 <button id="btn-install-app" class="btn" style="display:none; background:linear-gradient(135deg,#1e90ff,#3742fa);" onclick="ui.installPWA()">Installer l'application</button>
-                <button class="btn btn-rules" onclick="ui.showHelpModal()">Règles du Jeu <span class="version-pill">v2.14</span></button>
+                <button class="btn btn-rules" onclick="ui.showHelpModal()">Règles du Jeu <span class="version-pill">v2.15</span></button>
             </div>
         </div>
 
@@ -160,7 +160,8 @@
             </div>
             
             <button class="btn btn-main" id="btn-rematch" style="width:100%; margin-top:20px;" onclick="game.sendAction('REMATCH')">🔄 Rejouer une manche</button>
-            <button class="btn btn-secondary" style="width:100%; margin-top:10px;" onclick="game.quitToHome()">🏠 Quitter</button>
+            <button class="btn btn-secondary" id="btn-return-lobby" style="width:100%; margin-top:10px;" onclick="game.sendAction('RETURN_LOBBY')">👥 Retourner au Salon</button>
+            <button class="btn" style="width:100%; margin-top:10px; background:rgba(255,255,255,0.1); border:1px solid rgba(255,255,255,0.2); color:white; border-radius:50px; font-weight:800;" onclick="game.quitToHome()">🏠 Quitter</button>
         </div>
     </div>
 

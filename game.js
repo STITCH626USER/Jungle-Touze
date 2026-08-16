@@ -321,22 +321,38 @@ const ui = {
         
         const scoresDiv = document.getElementById('round-end-scores');
         if(scoresDiv) {
+            let scoreboardRows = '';
+            if(game.state && game.state.players) {
+                const sortedPlayers = [...game.state.players].sort((a, b) => (b.score || 0) - (a.score || 0));
+                scoreboardRows = sortedPlayers.map(p => `
+                    <div style="display:flex; justify-content:space-between; align-items:center; padding:6px 12px; margin-top:4px; background:rgba(255,255,255,0.06); border-radius:10px; font-size:1rem; font-weight:800; color:white;">
+                        <span>${p.isBot ? '🤖 ' : ''}${p.name}${p.id === game.myId ? ' (Vous)' : ''}</span>
+                        <span style="color:var(--gold);">🏆 ${p.score || 0} ${ (p.score || 0) > 1 ? 'victoires' : 'victoire'}</span>
+                    </div>
+                `).join('');
+            }
+
             scoresDiv.innerHTML = `
-                <div style="font-size:1.1rem; color:rgba(255,255,255,0.8); text-transform:uppercase; letter-spacing:1px; margin-bottom:5px;">Victoire validée par :</div>
-                <div style="font-size:1.6rem; font-weight:900; color:var(--gold); text-shadow:0 0 15px rgba(255,215,0,0.5); animation:pulse-turn 2s infinite;">${winnerData.reason}</div>
+                <div style="font-size:0.95rem; color:rgba(255,255,255,0.8); text-transform:uppercase; letter-spacing:1px; margin-bottom:4px;">Victoire validée par :</div>
+                <div style="font-size:1.5rem; font-weight:900; color:var(--gold); text-shadow:0 0 15px rgba(255,215,0,0.5); margin-bottom:14px;">${winnerData.reason}</div>
+                <div style="font-size:0.9rem; color:var(--secondary); text-transform:uppercase; letter-spacing:1px; margin-bottom:6px; font-weight:900;">🏆 Tableau des manches :</div>
+                <div style="display:flex; flex-direction:column; gap:4px; width:100%; max-width:320px; margin:0 auto;">
+                    ${scoreboardRows}
+                </div>
             `;
-            scoresDiv.style.background = 'rgba(0,0,0,0.4)';
-            scoresDiv.style.border = '1.5px solid rgba(255,215,0,0.3)';
-            scoresDiv.style.boxShadow = '0 10px 30px rgba(0,0,0,0.5)';
+            scoresDiv.style.background = 'rgba(0,0,0,0.5)';
+            scoresDiv.style.border = '1.5px solid rgba(255,215,0,0.35)';
+            scoresDiv.style.boxShadow = '0 10px 30px rgba(0,0,0,0.6)';
             scoresDiv.style.textAlign = 'center';
-            scoresDiv.style.padding = '15px';
+            scoresDiv.style.padding = '18px 14px';
+            scoresDiv.style.width = '100%';
             scoresDiv.style.transform = 'scale(0)';
             scoresDiv.style.animation = 'bounceIn 0.5s cubic-bezier(0.34,1.56,0.64,1) forwards';
             scoresDiv.style.animationDelay = `${winnerData.cards.length * 0.1 + 0.2}s`;
         }
         
         const rematchBtn = document.getElementById('btn-rematch');
-        rematchBtn.textContent = '🔄 Nouvelle Partie';
+        if(rematchBtn) rematchBtn.textContent = '🔄 Rejouer une manche';
     },
     
     playConfetti() {
@@ -916,7 +932,7 @@ class GameEngine {
         }
 
         const activePlayer = this.state.players[this.state.turnIndex];
-        if (activePlayer.id !== playerId && !['quit'].includes(action)) {
+        if (activePlayer && activePlayer.id !== playerId && !['quit', 'REMATCH', 'RETURN_LOBBY'].includes(action)) {
             return;
         }
 
@@ -1044,6 +1060,25 @@ class GameEngine {
                 this.state.winner = null;
                 this.broadcastState();
                 setTimeout(() => this.startGame(), 1000);
+                break;
+
+            case 'RETURN_LOBBY':
+                this.state.status = 'waiting';
+                this.state.players.forEach(p => p.cards = []);
+                this.state.deckLeft = [];
+                this.state.deckRight = [];
+                this.state.diceResults = [];
+                this.state.diceWinner = null;
+                this.crabTargeting = false;
+                this.monkeyTargeting = false;
+                this.crocodileTargeting = false;
+                this.forcedDeck = null;
+                this.isPlacingCard = false;
+                this.currentDrawnCard = null;
+                this.state.pendingPower = null;
+                this.state.winner = null;
+                this.broadcastState();
+                this.updateLobbyUI();
                 break;
                 
             case 'execute_power':
@@ -1318,7 +1353,8 @@ class GameEngine {
 
             if(winReason) {
                 this.state.status = 'ended';
-                this.state.winner = { id: player.id, name: player.name, reason: winReason, cards: player.cards, matchWin: true };
+                player.score = (player.score || 0) + 1;
+                this.state.winner = { id: player.id, name: player.name, reason: winReason, cards: [...player.cards], matchWin: true };
                 this.broadcastState();
                 return;
             }
