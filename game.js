@@ -936,7 +936,7 @@ class GameEngine {
         }
 
         const activePlayer = this.state.players[this.state.turnIndex];
-        if (activePlayer && activePlayer.id !== playerId && !['quit', 'REMATCH', 'RETURN_LOBBY'].includes(action)) {
+        if (activePlayer && activePlayer.id !== playerId && !['quit', 'REMATCH', 'RETURN_LOBBY', 'acknowledge_parrot_fail'].includes(action)) {
             return;
         }
 
@@ -1042,6 +1042,10 @@ class GameEngine {
                 
             case 'acknowledge_parrot_fail':
                 if (this.state.activeAction === 'parrot_failed') {
+                    if (this.parrotFailTimeout) {
+                        clearTimeout(this.parrotFailTimeout);
+                        this.parrotFailTimeout = null;
+                    }
                     ui.hideModal('parrot-result-modal');
                     this.state.pendingPower = null;
                     this.nextTurn();
@@ -1307,6 +1311,14 @@ class GameEngine {
                     };
                     this.state.activeAction = 'parrot_failed';
                     this.broadcastState();
+
+                    // Auto-dismiss after 3.5s as a failsafe so the game never gets stuck
+                    if (this.parrotFailTimeout) clearTimeout(this.parrotFailTimeout);
+                    this.parrotFailTimeout = setTimeout(() => {
+                        if (this.state && this.state.activeAction === 'parrot_failed') {
+                            this.processAction(player.id, 'acknowledge_parrot_fail', {});
+                        }
+                    }, 3500);
                 }
                 break;
                 

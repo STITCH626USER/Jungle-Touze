@@ -161,16 +161,16 @@ input[type="text"]:focus { outline: none; border-color: var(--secondary); box-sh
     bottom: 0;
     left: 0;
     right: 0;
-    height: 72%;
+    height: 82%;
     background-image: url('assets/home_bg_jungle.png');
     background-size: cover;
-    background-position: top center;
+    background-position: center bottom;
     background-repeat: no-repeat;
     pointer-events: none;
     z-index: 0;
-    opacity: 0.9;
-    mask-image: linear-gradient(to top, rgba(0,0,0,1) 0%, rgba(0,0,0,0.85) 50%, rgba(0,0,0,0) 100%);
-    -webkit-mask-image: linear-gradient(to top, rgba(0,0,0,1) 0%, rgba(0,0,0,0.85) 50%, rgba(0,0,0,0) 100%);
+    opacity: 0.85;
+    mask-image: linear-gradient(to top, rgba(0,0,0,1) 0%, rgba(0,0,0,0.9) 60%, rgba(0,0,0,0) 100%);
+    -webkit-mask-image: linear-gradient(to top, rgba(0,0,0,1) 0%, rgba(0,0,0,0.9) 60%, rgba(0,0,0,0) 100%);
 }
 
 #screen-home > * { position: relative; z-index: 1; }
