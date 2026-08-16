@@ -643,8 +643,6 @@ class GameEngine {
             this.broadcastState();
             this.updateLobbyUI();
         } else if (data.type === 'ACTION') {
-            const activePlayer = this.state.players[this.state.turnIndex];
-            console.log(`[HOST] ACTION '${data.action}' from ${data.id}. ActivePlayer: ${activePlayer ? activePlayer.id : 'NONE'}. Match: ${activePlayer ? (activePlayer.id === data.id) : false}`);
             this.processAction(data.id, data.action, data.payload);
         }
     }
@@ -681,7 +679,6 @@ class GameEngine {
         if(this.isHost) {
             this.processAction(this.myId, action, payload);
         } else {
-            console.log(`[CLIENT] sendAction '${action}' myId=${this.myId}`, payload);
             this.conn.send({ type: 'ACTION', id: this.myId, action, payload });
         }
     }
@@ -896,6 +893,7 @@ class GameEngine {
         this.parrotGiveTargeting = false;
         this.monkeySelectedCards = [];
         this.myTurnToastShown = false;
+        this.powerTargetToastShown = false;
         if(this.botLivenessTimer) clearTimeout(this.botLivenessTimer);
     }
 
@@ -903,7 +901,6 @@ class GameEngine {
     processAction(playerId, action, payload) {
         const activePlayer = this.state.players[this.state.turnIndex];
         if (activePlayer.id !== playerId && !['quit'].includes(action)) {
-            console.warn(`[processAction] BLOCKED: '${action}' from '${playerId}'. Expected '${activePlayer ? activePlayer.id : 'NONE'}'`);
             return;
         }
 
@@ -1378,9 +1375,6 @@ class GameEngine {
                 crocodile: 'Crocodile', monkey: 'Singe', crab: 'Crabe',
                 parrot: 'Perroquet', hermit_crab: "Bernard l'Hermite"
             };
-            if(!this.isHost) {
-                console.log(`[CLIENT renderState] action=${this.state.activeAction} myId=${this.myId} activePlayerId=${activePlayer ? activePlayer.id : 'NONE'} isMyTurn=${isMyTurn}`);
-            }
             // Sync history from state (important for clients who don't run processAction)
             if(this.state.history && this.state.history.length > 0 && !this.isHost) {
                 const h = document.getElementById('history-list');
@@ -1593,11 +1587,14 @@ class GameEngine {
                 else if(this.state.activeAction === 'power_target') {
                     document.getElementById('drawn-card').style.display = 'none';
                     const c = this.state.pendingPower.card;
-                    ui.toast(`Pouvoir ${c.animal} : Sélectionnez une cible sur le plateau !`);
+                    // Toast shown only once per power_target entry to avoid spam
+                    if(!this.powerTargetToastShown) {
+                        ui.toast(`Pouvoir ${c.animal} : Sélectionnez une cible !`);
+                        this.powerTargetToastShown = true;
+                    }
                     
                     if(c.animal === 'parrot') {
-                        // Only (re)initialize the modal if it's not already showing,
-                        // so we don't reset the player's animal selection mid-guess
+                        // Only (re)initialize the modal if it's not already showing
                         const parrotModal = document.getElementById('parrot-modal');
                         if(parrotModal.style.display !== 'flex') {
                             ui.showModal('parrot-modal');
@@ -1998,7 +1995,6 @@ class GameEngine {
                     }
                     const animal = this.state.pendingPower.card.animal;
                     const payload = this.getBotPowerPayload(bot, animal);
-                    console.log(`[BOT ${bot.name}] Executing power: ${animal}`, payload);
                     this.processAction(bot.id, 'execute_power', payload);
                 }
                 else if(this.state.activeAction === 'parrot_failed') {
