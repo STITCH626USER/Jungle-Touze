@@ -182,20 +182,18 @@ input[type="text"]:focus {
     justify-content: space-between;
     align-items: center;
     text-align: center;
-    padding: 18px 16px max(12px, env(safe-area-inset-bottom));
+    padding: 12px 14px max(10px, env(safe-area-inset-bottom));
     position: relative;
     overflow: hidden;
 }
 
-/* Fond néon jungle personnages */
+/* Fond néon jungle personnages : véritable œuvre d'origine avec le crocodile et les animaux en partouze */
 #screen-home::after {
     content: '';
     position: absolute;
     bottom: 0;
     left: 0;
     right: 0;
-    top: 0;
-    width: 100%;
     height: 100%;
     background-image: url('assets/home_bg_jungle.png');
     background-size: cover;
@@ -214,14 +212,14 @@ input[type="text"]:focus {
     align-items: center;
     width: 100%;
     max-width: 440px;
-    gap: 8px;
-    margin-top: 5px;
+    gap: 6px;
+    margin-top: 0;
 }
 
 /* Logo : PNG transparent compact */
 .home-logo-img {
     max-width: 100%;
-    width: clamp(190px, 58vw, 300px);
+    width: clamp(200px, 62vw, 320px);
     height: auto;
     display: block;
     margin: 0 auto;
@@ -230,14 +228,14 @@ input[type="text"]:focus {
     animation: floatLogo 5s ease-in-out infinite;
 }
 
-/* Menu Actions : Barre d'action positionnée directement sous le logo dans le ciel nocturne */
+/* Menu Actions : Barre d'action positionnée en haut sous le logo */
 .menu-actions {
-    margin: 4px auto 0;
+    margin: 0 auto;
     width: 100%;
     max-width: 420px;
     display: flex;
     flex-direction: column;
-    background: rgba(10, 6, 22, 0.75);
+    background: rgba(10, 6, 22, 0.72);
     border: 1.5px solid rgba(255, 255, 255, 0.22);
     border-radius: 24px;
     padding: 7px 9px;
