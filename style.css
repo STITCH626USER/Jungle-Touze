@@ -172,37 +172,75 @@ input[type="text"]:focus {
 
 /* --- Home Screen --- */
 #screen-home {
-    justify-content: center;
+    justify-content: flex-start;
     align-items: center;
     text-align: center;
-    padding: 24px 16px;
+    padding: clamp(14px, 3vh, 24px) 14px max(14px, env(safe-area-inset-bottom));
     position: relative;
-    overflow: hidden;
+    overflow-y: auto;
+    overflow-x: hidden;
     height: 100dvh;
     background: #080410 url('assets/home_bg_jungle.png') no-repeat center center;
     background-size: cover;
+    gap: 12px;
 }
 
 .logo-container {
-    display: none; /* Le logo néon JUNGLE TOUZE est déjà intégré en haut du fond */
+    display: block;
+    margin-top: 2px;
+    margin-bottom: -2px;
+    z-index: 2;
+    flex-shrink: 0;
 }
 
-/* Menu Actions : Bulle flottante en verre dépoli au milieu */
+/* Logo : Néon avec glow animé pulsant */
+.home-logo-img {
+    max-width: 100%;
+    width: clamp(190px, 58vw, 290px);
+    height: auto;
+    display: block;
+    margin: 0 auto;
+    filter: drop-shadow(0 0 12px rgba(0, 229, 255, 0.8))
+            drop-shadow(0 0 25px rgba(255, 51, 102, 0.65))
+            drop-shadow(0 0 45px rgba(0, 229, 255, 0.4));
+    animation: neonGlowPulse 3s ease-in-out infinite alternate, floatLogo 4.5s ease-in-out infinite;
+}
+
+@keyframes neonGlowPulse {
+    0% {
+        filter: drop-shadow(0 0 8px rgba(0, 229, 255, 0.7))
+                drop-shadow(0 0 18px rgba(255, 51, 102, 0.55))
+                drop-shadow(0 0 30px rgba(0, 229, 255, 0.3));
+    }
+    50% {
+        filter: drop-shadow(0 0 16px rgba(0, 229, 255, 1))
+                drop-shadow(0 0 32px rgba(255, 51, 102, 0.85))
+                drop-shadow(0 0 55px rgba(0, 229, 255, 0.6));
+    }
+    100% {
+        filter: drop-shadow(0 0 10px rgba(0, 229, 255, 0.75))
+                drop-shadow(0 0 22px rgba(255, 51, 102, 0.6))
+                drop-shadow(0 0 38px rgba(0, 229, 255, 0.35));
+    }
+}
+
+/* Menu Actions : Bulle flottante */
 .menu-actions {
-    margin: auto 0;
+    margin: 0;
     width: 100%;
     max-width: 440px;
     display: flex;
     flex-direction: column;
-    gap: 12px;
-    background: rgba(14, 8, 28, 0.78);
+    gap: 10px;
+    background: rgba(14, 8, 28, 0.82);
     border: 1.5px solid rgba(0, 229, 255, 0.35);
-    border-radius: 32px;
-    padding: 24px 20px;
+    border-radius: 28px;
+    padding: 14px 16px;
     backdrop-filter: blur(24px);
     -webkit-backdrop-filter: blur(24px);
-    box-shadow: 0 16px 40px rgba(0, 0, 0, 0.8), 0 0 30px rgba(0, 229, 255, 0.25), inset 0 0 15px rgba(255, 51, 102, 0.15);
+    box-shadow: 0 12px 35px rgba(0, 0, 0, 0.8), 0 0 25px rgba(0, 229, 255, 0.25), inset 0 0 15px rgba(255, 51, 102, 0.12);
     z-index: 10;
+    flex-shrink: 0;
 }
 
 .menu-input-row {
@@ -269,28 +307,30 @@ input[type="text"]:focus {
 
 /* --- Galerie des cartes du jeu (En dessous du menu d'accueil) --- */
 .home-cards-showcase {
-    margin-top: 14px;
+    margin-top: 2px;
+    margin-bottom: 8px;
     width: 100%;
     max-width: 440px;
-    background: rgba(10, 6, 20, 0.75);
+    background: rgba(10, 6, 20, 0.78);
     border: 1.5px solid rgba(255, 255, 255, 0.15);
     border-radius: 24px;
-    padding: 12px 14px 14px;
+    padding: 10px 12px 12px;
     backdrop-filter: blur(20px);
     -webkit-backdrop-filter: blur(20px);
     box-shadow: 0 10px 30px rgba(0, 0, 0, 0.7), 0 0 20px rgba(255, 51, 102, 0.18);
     z-index: 10;
+    flex-shrink: 0;
 }
 
 .cards-showcase-header {
     display: flex;
     justify-content: center;
     align-items: center;
-    margin-bottom: 10px;
+    margin-bottom: 8px;
 }
 
 .showcase-title {
-    font-size: 0.8rem;
+    font-size: 0.78rem;
     font-weight: 900;
     text-transform: uppercase;
     letter-spacing: 1.2px;
@@ -308,9 +348,16 @@ input[type="text"]:focus {
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 5px;
-    cursor: pointer;
-    transition: transform 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    gap: 4px;
+    cursor: default;
+    position: relative;
+    z-index: 1;
+    transition: z-index 0s 0.2s;
+}
+
+.showcase-card-thumb:hover {
+    z-index: 20;
+    transition: z-index 0s 0s;
 }
 
 .showcase-card-thumb img {
@@ -320,14 +367,15 @@ input[type="text"]:focus {
     border-radius: 8px;
     border: 1.5px solid rgba(255, 255, 255, 0.25);
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.6);
-    background: #000;
-    transition: all 0.2s ease;
+    background: #fff;
+    transition: transform 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.275), box-shadow 0.25s ease, border-color 0.25s ease;
+    transform-origin: center bottom;
 }
 
 .showcase-card-thumb:hover img {
     border-color: #00e5ff;
-    box-shadow: 0 0 14px rgba(0, 229, 255, 0.8);
-    transform: translateY(-3px) scale(1.06);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.9), 0 0 20px rgba(0, 229, 255, 0.9);
+    transform: scale(1.45) translateY(-6px);
 }
 
 .showcase-card-thumb .card-thumb-label {
@@ -339,11 +387,12 @@ input[type="text"]:focus {
     overflow: hidden;
     text-overflow: ellipsis;
     max-width: 100%;
+    transition: color 0.2s ease;
 }
 
 .showcase-card-thumb:hover .card-thumb-label {
     color: #ff3366;
-    text-shadow: 0 0 6px rgba(255, 51, 102, 0.6);
+    text-shadow: 0 0 8px rgba(255, 51, 102, 0.8);
 }
 
 
