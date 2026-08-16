@@ -21,8 +21,7 @@
 
 body {
     font-family: var(--font-main);
-    background: #0a0614 url('assets/board_bg_neon.png') no-repeat center center fixed;
-    background-size: cover;
+    background: #0d0918;
     color: var(--text-main);
     height: 100dvh;
     display: flex;
@@ -33,18 +32,10 @@ body {
     -webkit-tap-highlight-color: transparent;
 }
 
-#particle-canvas {
-    position: fixed;
-    top: 0; left: 0;
-    width: 100%; height: 100%;
-    z-index: -1;
-    pointer-events: none;
-}
-
 #app-container {
     width: 100%;
     height: 100%;
-    background: rgba(10, 6, 20, 0.4);
+    background: #0d0918;
     position: relative;
     display: flex;
     flex-direction: column;
@@ -179,41 +170,18 @@ input[type="text"]:focus {
 
 /* --- Home Screen --- */
 #screen-home {
-    justify-content: space-between;
+    justify-content: flex-start;
     align-items: center;
     text-align: center;
-    padding: 12px 14px max(10px, env(safe-area-inset-bottom));
+    padding: 20px 16px max(15px, env(safe-area-inset-bottom));
     position: relative;
     overflow: hidden;
+    height: 100dvh;
 }
 
-/* Fond néon jungle personnages : véritable œuvre d'origine avec le crocodile et les animaux en partouze */
-#screen-home::after {
-    content: '';
-    position: absolute;
-    bottom: 0;
-    left: 0;
-    right: 0;
-    height: 100%;
-    background-image: url('assets/home_bg_jungle.png');
-    background-size: cover;
-    background-position: center bottom;
-    background-repeat: no-repeat;
-    pointer-events: none;
-    z-index: 0;
-    opacity: 0.98;
-}
-
-#screen-home > * { position: relative; z-index: 1; }
-
-.home-top-section {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    width: 100%;
-    max-width: 440px;
-    gap: 6px;
-    margin-top: 0;
+.logo-container {
+    margin-top: 10px;
+    margin-bottom: 10px;
 }
 
 /* Logo : PNG transparent compact */

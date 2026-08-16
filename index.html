@@ -17,11 +17,9 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;700;900&display=swap" rel="stylesheet">
     
-    <link rel="stylesheet" href="style.css?v=8">
+    <link rel="stylesheet" href="style.css?v=234">
 </head>
 <body>
-    <canvas id="particle-canvas"></canvas>
-
     <div id="app-container">
         <!-- TOP RIGHT CONTROLS -->
         <div class="top-right-controls" style="display:none;" id="global-controls">
@@ -30,25 +28,22 @@
 
         <!-- HOME SCREEN -->
         <div id="screen-home" class="screen active">
-            <div class="home-top-section">
-                <div class="logo-container bounce-in">
-                    <img src="assets/logo_neon.png" alt="Jungle Touze" class="home-logo-img">
-                </div>
-                
-                <!-- Action Bar directly below logo -->
-                <div class="menu-actions fade-in-up">
-                    <div class="menu-input-row">
-                        <input type="text" id="input-username" placeholder="Votre prénom..." maxlength="10" autocomplete="off">
-                        <button class="btn btn-main btn-action-compact" onclick="game.hostRoom()">Créer</button>
-                        <button class="btn btn-secondary btn-action-compact" onclick="ui.showScreen('screen-join')">Rejoindre</button>
-                    </div>
+            <div class="logo-container bounce-in">
+                <img src="assets/logo_neon.png" alt="Jungle Touze" class="home-logo-img">
+            </div>
+            
+            <div class="menu-actions fade-in-up">
+                <div class="menu-input-row">
+                    <input type="text" id="input-username" placeholder="Votre prénom..." maxlength="10" autocomplete="off">
+                    <button class="btn btn-main btn-action-compact" onclick="game.hostRoom()">Créer</button>
+                    <button class="btn btn-secondary btn-action-compact" onclick="ui.showScreen('screen-join')">Rejoindre</button>
                 </div>
             </div>
 
             <!-- Bottom footer with version / rules only -->
             <div class="home-bottom-footer">
                 <button id="btn-install-app" class="btn btn-rules-mini" style="display:none;" onclick="ui.installPWA()">📲 Installer</button>
-                <button class="btn btn-rules-mini" onclick="ui.showHelpModal()">📖 Règles du Jeu <span class="version-pill">v2.29</span></button>
+                <button class="btn btn-rules-mini" onclick="ui.showHelpModal()">📖 Règles du Jeu <span class="version-pill">v2.35</span></button>
             </div>
         </div>
 

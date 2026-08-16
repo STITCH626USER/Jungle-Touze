@@ -426,8 +426,8 @@ class GameEngine {
         this.myTurnToastShown = false;
         this.hasSeenPlayingStart = false;
         
+        this.initEventListeners();
         this.initPWA();
-        this.initParticles();
     }
 
     getInitialState() {
@@ -2174,60 +2174,32 @@ class GameEngine {
         location.reload();
     }
 
-    // --- PWA & PARTICLES ---
+    // --- PWA ---
     initPWA() {
-        if('serviceWorker' in navigator) {
-            navigator.serviceWorker.register('./sw.js').then(()=>console.log('SW Registered'));
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('./sw.js').then(reg => {
+                    console.log('SW enregistré:', reg.scope);
+                }).catch(err => {
+                    console.log('SW échec:', err);
+                });
+            });
         }
+
         window.addEventListener('beforeinstallprompt', (e) => {
             e.preventDefault();
+            this.deferredPrompt = e;
             const btn = document.getElementById('btn-install-app');
-            if(btn) {
+            if (btn) {
                 btn.style.display = 'block';
                 btn.onclick = () => {
                     btn.style.display = 'none';
-                    e.prompt();
+                    this.deferredPrompt.prompt();
+                    this.deferredPrompt.userChoice.then(() => {
+                        this.deferredPrompt = null;
+                    });
                 };
             }
-        });
-    }
-
-    initParticles() {
-        const canvas = document.getElementById('particle-canvas');
-        if(!canvas) return;
-        const ctx = canvas.getContext('2d');
-        canvas.width = window.innerWidth;
-        canvas.height = window.innerHeight;
-        
-        const particles = Array.from({length: 30}).map(() => ({
-            x: Math.random() * canvas.width,
-            y: Math.random() * canvas.height,
-            r: Math.random() * 2 + 1,
-            dx: (Math.random() - 0.5) * 0.5,
-            dy: (Math.random() - 0.5) * 0.5,
-            c: Math.random() > 0.5 ? '#FF3366' : '#00E5FF'
-        }));
-
-        const animate = () => {
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
-            particles.forEach(p => {
-                p.x += p.dx;
-                p.y += p.dy;
-                if(p.x < 0 || p.x > canvas.width) p.dx *= -1;
-                if(p.y < 0 || p.y > canvas.height) p.dy *= -1;
-                ctx.beginPath();
-                ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
-                ctx.fillStyle = p.c + '66'; // add alpha
-                ctx.shadowBlur = 10;
-                ctx.shadowColor = p.c;
-                ctx.fill();
-            });
-            requestAnimationFrame(animate);
-        };
-        animate();
-        window.addEventListener('resize', () => {
-            canvas.width = window.innerWidth;
-            canvas.height = window.innerHeight;
         });
     }
 }
