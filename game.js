@@ -1086,14 +1086,6 @@ class GameEngine {
                 const p2 = this.state.players.find(p => p.id === payload.targetPlayerId);
                 if(p2) {
                     try {
-                        let myCrocoIdx = player.cards.findIndex(c => c.id === this.state.pendingPower.card.id);
-                        if (myCrocoIdx === -1) myCrocoIdx = player.cards.findIndex(c => c.animal === 'crocodile');
-                        
-                        let crocodileCard = null;
-                        if (myCrocoIdx !== -1) {
-                            crocodileCard = player.cards.splice(myCrocoIdx, 1)[0];
-                        }
-                        
                         const c2 = p2.cards.find(c => c.id === payload.cardId);
                         p2.cards = p2.cards.filter(c => c.id !== payload.cardId);
                         
@@ -1116,9 +1108,6 @@ class GameEngine {
                                 ui.toast(`🐊 ${player.name} élimine le ${anName} de ${p2.name} !`);
                             }
                         }
-                        
-                        if (crocodileCard && this.state.deckRight) this.state.deckRight.push(crocodileCard);
-                        
                     } catch (e) {
                         console.error("Crocodile power failed:", e);
                     }
