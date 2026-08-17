@@ -22,6 +22,36 @@ const ui = {
         document.getElementById(id).classList.add('active');
         document.getElementById('global-controls').style.display = (id === 'screen-game') ? 'flex' : 'none';
     },
+    checkGatePassword() {
+        const input = document.getElementById('input-gate-pass');
+        const err = document.getElementById('gate-error-msg');
+        if(!input) return;
+        const val = input.value.trim().toLowerCase();
+        if(val === 'touze') {
+            sessionStorage.setItem('jt_unlocked', 'true');
+            if(err) err.style.display = 'none';
+            this.showScreen('screen-home');
+            this.toast("Bienvenue dans Jungle Touze ! 🌴");
+        } else {
+            if(err) {
+                err.textContent = "Mot de passe incorrect ❌";
+                err.style.display = 'block';
+                // Trigger shake animation again
+                err.style.animation = 'none';
+                void err.offsetWidth;
+                err.style.animation = 'shakeError 0.35s ease-in-out';
+            }
+            input.value = '';
+            input.focus();
+        }
+    },
+    initGate() {
+        if(sessionStorage.getItem('jt_unlocked') === 'true') {
+            this.showScreen('screen-home');
+        } else {
+            this.showScreen('screen-gate');
+        }
+    },
     showModal(id) { document.getElementById(id).style.display = 'flex'; },
     hideModal(id) { document.getElementById(id).style.display = 'none'; },
     showHelpModal() { 
@@ -2256,3 +2286,10 @@ class GameEngine {
 
 // Init
 const game = new GameEngine();
+window.addEventListener('DOMContentLoaded', () => {
+    ui.initGate();
+});
+// Also call immediately in case DOM is already loaded
+if (document.readyState === 'interactive' || document.readyState === 'complete') {
+    ui.initGate();
+}

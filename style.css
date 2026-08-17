@@ -172,6 +172,118 @@ input[type="text"]:focus {
     box-shadow: 0 12px 35px rgba(0, 0, 0, 0.7), 0 0 25px rgba(0, 229, 255, 0.15);
 }
 
+/* --- Gate Lock Screen --- */
+#screen-gate {
+    justify-content: center;
+    align-items: center;
+    text-align: center;
+    padding: clamp(20px, 4vh, 35px) 16px max(16px, env(safe-area-inset-bottom));
+    position: relative;
+    overflow-y: auto;
+    overflow-x: hidden;
+    height: 100dvh;
+    background: #080410 url('assets/home_bg_jungle.png') no-repeat center center;
+    background-size: cover;
+    gap: 16px;
+}
+
+.gate-actions {
+    margin: 0;
+    width: 100%;
+    max-width: 380px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 12px;
+    background: rgba(14, 8, 28, 0.86);
+    border: 1.5px solid rgba(0, 229, 255, 0.4);
+    border-radius: 30px;
+    padding: 24px 20px;
+    backdrop-filter: blur(25px);
+    -webkit-backdrop-filter: blur(25px);
+    box-shadow: 0 16px 40px rgba(0, 0, 0, 0.85), 0 0 30px rgba(0, 229, 255, 0.25), inset 0 0 15px rgba(255, 51, 102, 0.15);
+    z-index: 10;
+    flex-shrink: 0;
+    box-sizing: border-box;
+}
+
+.gate-lock-icon {
+    font-size: 2.2rem;
+    filter: drop-shadow(0 0 12px rgba(255, 51, 102, 0.8));
+    animation: lockPulse 2s ease-in-out infinite alternate;
+}
+
+@keyframes lockPulse {
+    0% { transform: scale(1); filter: drop-shadow(0 0 8px rgba(255, 51, 102, 0.6)); }
+    100% { transform: scale(1.1); filter: drop-shadow(0 0 18px rgba(0, 229, 255, 0.9)); }
+}
+
+.gate-title {
+    font-size: 1.4rem;
+    font-weight: 900;
+    text-transform: uppercase;
+    letter-spacing: 1.5px;
+    color: #fff;
+    text-shadow: 0 0 12px rgba(0, 229, 255, 0.6);
+    margin: 0;
+}
+
+.gate-subtitle {
+    font-size: 0.9rem;
+    color: rgba(255, 255, 255, 0.8);
+    margin-bottom: 6px;
+    line-height: 1.4;
+}
+
+#form-gate-password {
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+#input-gate-pass {
+    width: 100%;
+    margin-bottom: 0;
+    padding: 13px 18px;
+    font-size: 1.05rem;
+    text-align: center;
+    letter-spacing: 2px;
+    background: rgba(0, 0, 0, 0.65);
+    border: 1.5px solid rgba(0, 229, 255, 0.45);
+    border-radius: 25px;
+    box-shadow: inset 0 2px 10px rgba(0, 0, 0, 0.5);
+    color: #fff;
+    box-sizing: border-box;
+}
+
+#input-gate-pass:focus {
+    border-color: #ff3366;
+    box-shadow: 0 0 20px rgba(255, 51, 102, 0.6), inset 0 2px 10px rgba(0, 0, 0, 0.5);
+}
+
+.btn-gate-enter {
+    width: 100% !important;
+    padding: 13px 20px !important;
+    font-size: 1.05rem !important;
+    border-radius: 25px !important;
+    letter-spacing: 1.5px !important;
+}
+
+.gate-error-msg {
+    color: #ff4757;
+    font-weight: 800;
+    font-size: 0.88rem;
+    text-shadow: 0 0 10px rgba(255, 71, 87, 0.6);
+    animation: shakeError 0.35s ease-in-out;
+}
+
+@keyframes shakeError {
+    0%, 100% { transform: translateX(0); }
+    20%, 60% { transform: translateX(-6px); }
+    40%, 80% { transform: translateX(6px); }
+}
+
 /* --- Home Screen --- */
 #screen-home {
     justify-content: flex-start;

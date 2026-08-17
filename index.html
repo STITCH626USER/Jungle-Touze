@@ -17,7 +17,7 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;700;900&display=swap" rel="stylesheet">
     
-    <link rel="stylesheet" href="style.css?v=254">
+    <link rel="stylesheet" href="style.css?v=257">
 </head>
 <body>
     <div id="app-container">
@@ -26,8 +26,26 @@
             <button id="btn-quit-game" class="btn-quit-discrete" onclick="ui.showQuitConfirmModal()">✕</button>
         </div>
 
+        <!-- GATE LOCK SCREEN (CODE ACCESS) -->
+        <div id="screen-gate" class="screen active">
+            <div class="logo-container bounce-in">
+                <img src="assets/logo_neon.png" alt="Jungle Touze" class="home-logo-img">
+            </div>
+            
+            <div class="gate-actions fade-in-up">
+                <div class="gate-lock-icon">🔒</div>
+                <h3 class="gate-title">Accès Privé</h3>
+                <p class="gate-subtitle">Entrez le mot de passe pour entrer dans la Jungle :</p>
+                <form id="form-gate-password" onsubmit="event.preventDefault(); ui.checkGatePassword();" autocomplete="off">
+                    <input type="password" id="input-gate-pass" placeholder="Mot de passe..." autofocus autocomplete="off">
+                    <button type="submit" class="btn btn-main btn-gate-enter">🔓 Entrer</button>
+                </form>
+                <div id="gate-error-msg" class="gate-error-msg" style="display:none;"></div>
+            </div>
+        </div>
+
         <!-- HOME SCREEN -->
-        <div id="screen-home" class="screen active">
+        <div id="screen-home" class="screen">
             <div class="logo-container bounce-in">
                 <img src="assets/logo_neon.png" alt="Jungle Touze" class="home-logo-img">
             </div>
@@ -39,7 +57,7 @@
                     <button class="btn btn-secondary btn-action-compact" onclick="ui.showScreen('screen-join')">Rejoindre</button>
                 </div>
                 <button id="btn-install-app" class="btn btn-rules-embedded" style="display:none;" onclick="ui.installPWA()">📲 Installer</button>
-                <button class="btn btn-rules-embedded" onclick="ui.showHelpModal()">📖 Règles du Jeu <span class="version-pill">v2.56</span></button>
+                <button class="btn btn-rules-embedded" onclick="ui.showHelpModal()">📖 Règles du Jeu <span class="version-pill">v2.57</span></button>
             </div>
 
             <!-- GALERIE DES CARTES DU JEU -->
@@ -282,6 +300,6 @@
 
     <!-- PeerJS from CDN -->
     <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
-    <script src="game.js?v=256"></script>
+    <script src="game.js?v=257"></script>
 </body>
 </html>
