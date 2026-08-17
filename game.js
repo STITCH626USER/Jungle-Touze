@@ -798,7 +798,27 @@ class GameEngine {
 
     rollMyDice() {
         if(this.state.status !== 'rolling') return;
-        this.sendAction('roll_dice');
+        const box = document.getElementById('dice-visual-box');
+        const btn = document.getElementById('btn-roll-dice');
+        if(btn) btn.style.display = 'none';
+
+        // 1. Play local tumbling animation
+        if(box) {
+            box.classList.add('rolling');
+            const faces = ['⚀', '⚁', '⚂', '⚃', '⚄', '⚅'];
+            let rollsCount = 0;
+            const rollInterval = setInterval(() => {
+                box.textContent = faces[Math.floor(Math.random() * faces.length)];
+                rollsCount++;
+                if(rollsCount >= 10) {
+                    clearInterval(rollInterval);
+                    box.classList.remove('rolling');
+                    this.sendAction('roll_dice');
+                }
+            }, 70);
+        } else {
+            this.sendAction('roll_dice');
+        }
     }
 
     handlePlayerDiceRoll(playerId) {
@@ -843,7 +863,7 @@ class GameEngine {
             this.state.diceWinner = null;
             this.broadcastState();
             ui.toast(`C'est parti, ${starter.name} commence !`);
-        }, 2500);
+        }, 2800);
     }
 
     renderDiceModal() {
@@ -852,9 +872,10 @@ class GameEngine {
         const scoresList = document.getElementById('dice-scores-list');
         const btn = document.getElementById('btn-roll-dice');
         const box = document.getElementById('dice-visual-box');
+        const diceGlyphs = ['', '⚀', '⚁', '⚂', '⚃', '⚄', '⚅'];
 
         if(this.state.diceWinner) {
-            if(resEl) resEl.innerHTML = `<span style="color:var(--secondary);font-size:1.3rem;">C'est ${this.state.diceWinner} qui commence !</span>`;
+            if(resEl) resEl.innerHTML = `<span style="color:var(--secondary);font-size:1.3rem;text-shadow:0 0 15px rgba(0,229,255,0.7);">👑 C'est <strong>${this.state.diceWinner}</strong> qui commence !</span>`;
             if(btn) btn.style.display = 'none';
         } else {
             const hasMyRoll = this.state.diceResults && this.state.diceResults.some(r => r.id === this.myId);
@@ -868,15 +889,28 @@ class GameEngine {
 
         if(scoresList && this.state.diceResults) {
             scoresList.innerHTML = this.state.diceResults
-                .map(r => `<div><strong>${r.name}</strong> : 🎲 ${r.roll}</div>`)
+                .map(r => {
+                    const isWinner = this.state.diceWinner && this.state.diceWinner === r.name;
+                    const glyph = diceGlyphs[r.roll] || '🎲';
+                    return `<div class="dice-row ${isWinner ? 'winner' : ''}">
+                        <span>${isWinner ? '👑 ' : ''}<strong>${r.name}</strong></span>
+                        <span style="font-size:1.4rem;">${glyph} (${r.roll})</span>
+                    </div>`;
+                })
                 .join('');
         }
 
-        if(box && this.state.diceResults && this.state.diceResults.length > 0) {
-            const last = this.state.diceResults[this.state.diceResults.length - 1];
-            box.textContent = last.roll;
-        } else if(box) {
-            box.textContent = '🎲';
+        if(box) {
+            if(this.state.diceResults && this.state.diceResults.length > 0) {
+                const myResult = this.state.diceResults.find(r => r.id === this.myId);
+                const lastResult = this.state.diceResults[this.state.diceResults.length - 1];
+                const displayRoll = myResult ? myResult.roll : lastResult.roll;
+                box.textContent = diceGlyphs[displayRoll] || displayRoll;
+                box.style.fontSize = '4.2rem';
+            } else {
+                box.textContent = '🎲';
+                box.style.fontSize = '3.4rem';
+            }
         }
     }
 
